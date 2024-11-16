@@ -1,5 +1,3 @@
-# .github/workflows/deploy.yml
-
 name: Deploy with Minification
 
 on:
@@ -22,28 +20,38 @@ jobs:
       - name: Install dependencies
         run: |
           npm init -y
-          npm install terser javascript-obfuscator --save-dev
+          npm install terser javascript-obfuscator html-minifier-terser --save-dev
 
-      - name: Minify and Obfuscate
+      - name: Create dist structure
+        run: mkdir -p dist/assets
+
+      - name: Copy FFmpeg assets (without modification)
         run: |
-          # Create dist directory
-          mkdir -p dist
-          
-          # Copy all non-JS files
-          cp -r assets dist/
-          cp index.html dist/
-          
-          # Minify and obfuscate JavaScript
-          for file in $(find . -name "*.js" ! -path "./node_modules/*" ! -path "./dist/*"); do
-            # Create target directory
-            mkdir -p "dist/$(dirname $file)"
-            
-            # Obfuscate
-            npx javascript-obfuscator "$file" --output "dist/$file" --config ./.github/obfuscator.config.json
-            
-            # Minify the obfuscated file
-            npx terser "dist/$file" --compress --mangle --output "dist/$file"
-          done
+          cp -r assets/ffmpeg dist/assets/
+          cp -r assets/core dist/assets/
+          cp -r assets/util dist/assets/
+
+      - name: Obfuscate protection.js
+        run: |
+          npx javascript-obfuscator protection.js --output dist/protection.js --config .github/obfuscator.config.json
+          npx terser dist/protection.js --compress --mangle --output dist/protection.js
+
+      - name: Process HTML and inline scripts
+        run: |
+          # Extract, obfuscate, and reinsert JavaScript from HTML
+          npx html-minifier-terser \
+            --collapse-whitespace \
+            --remove-comments \
+            --minify-css true \
+            --minify-js "{
+              'mangle': true,
+              'compress': true
+            }" \
+            --file-ext html \
+            --input-dir ./ \
+            --output-dir dist \
+            --html5 true \
+            index.html
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
