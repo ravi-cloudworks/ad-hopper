@@ -550,26 +550,33 @@
 
         function updateDragZoneState(isLoading) {
             const dragZone = document.getElementById('dragZone');
-            const loadingText = 'Loading FFmpeg...';
+            if (!dragZone) return;
+
+            const loadingText = 'Loading video processor... Please wait.';
             const defaultText = 'Drag and drop video files here<br>or click to select files';
 
             if (isLoading) {
                 dragZone.classList.add('loading');
                 dragZone.querySelector('p').innerHTML = loadingText;
-                dragZone.style.pointerEvents = 'none'; // Disable interactions
+                dragZone.style.pointerEvents = 'none';
             } else {
                 dragZone.classList.remove('loading');
                 dragZone.querySelector('p').innerHTML = defaultText;
-                dragZone.style.pointerEvents = 'auto'; // Enable interactions
+                dragZone.style.pointerEvents = 'auto';
             }
         }
+        // Initialize FFmpeg first when page loads
+        document.addEventListener('DOMContentLoaded', async () => {
+            await initFFmpeg();
+        });
+
 
         async function initFFmpeg() {
-            if (!ffmpeg) {
-                try {
-                    // Show loading state
-                    updateDragZoneState(true);
+            try {
+                // Show loading state
+                updateDragZoneState(true);
 
+                if (!ffmpeg) {
                     ffmpeg = new FFmpeg();
                     ffmpeg.on("log", ({ message }) => {
                         console.log(message);
@@ -579,19 +586,23 @@
                         ? '/ad-hopper'
                         : '';
 
+                    console.log('Loading FFmpeg...');
                     await ffmpeg.load({
                         coreURL: `${basePath}/assets/core/package/dist/umd/ffmpeg-core.js`,
                     });
+                    console.log('FFmpeg loaded successfully');
 
                     isFFmpegLoaded = true;
-
-                    // Enable drag zone
-                    updateDragZoneState(false);
-                } catch (error) {
-                    console.error('Failed to load FFmpeg:', error);
-                    showToast('Failed to initialize video processor. Please refresh the page.', 'error');
-                    updateDragZoneState(false);
                 }
+
+                // Enable drag zone only after successful load
+                updateDragZoneState(false);
+                showToast('Video processor ready!', 'success');
+            } catch (error) {
+                console.error('Failed to load FFmpeg:', error);
+                isFFmpegLoaded = false;
+                showToast('Failed to initialize video processor. Please refresh the page.', 'error');
+                updateDragZoneState(false);
             }
 
             // Initialize Sortable only once
@@ -737,8 +748,9 @@
             await handleFiles(files);
         });
 
-        dragZone.addEventListener('click', () => {
+        dragZone.addEventListener('click', (e) => {
             if (!isFFmpegLoaded) {
+                e.preventDefault();
                 showToast('Please wait for video processor to initialize', 'warning');
                 return;
             }
@@ -751,7 +763,10 @@
         });
 
         async function handleFiles(files) {
-            await initFFmpeg();
+            if (!isFFmpegLoaded || !ffmpeg) {
+                showToast('Video processor is not ready yet. Please wait.', 'warning');
+                return;
+            }
 
             // Pre-validation checks before adding to UI
             for (const file of Array.from(files)) {
@@ -1194,6 +1209,7 @@
         }
 
         document.addEventListener('DOMContentLoaded', () => {
+            
             const mergeBtn = document.getElementById('mergeBtn');
             const tooltipContainer = mergeBtn.parentElement.querySelector('.merge-tooltip');
 
