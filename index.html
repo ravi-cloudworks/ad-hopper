@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Enhanced Video Merger</title>
+    <title>Ad Hopper</title>
     <style>
         :root {
             --primary-color: #3498db;
@@ -521,8 +521,14 @@
                 ffmpeg.on("log", ({ message }) => {
                     console.log(message);
                 });
+
+                // For GitHub Pages, we need the full repository-based path
+                const basePath = window.location.pathname.includes('ad-hopper')
+                    ? '/ad-hopper'
+                    : '';
+
                 await ffmpeg.load({
-                    coreURL: "./assets/core/package/dist/umd/ffmpeg-core.js",
+                    coreURL: `${basePath}/assets/core/package/dist/umd/ffmpeg-core.js`,
                 });
             }
 
