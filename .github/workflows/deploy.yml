@@ -38,16 +38,11 @@ jobs:
 
       - name: Process HTML and inline scripts
         run: |
-          # Extract, obfuscate, and reinsert JavaScript from HTML
           npx html-minifier-terser \
             --collapse-whitespace \
             --remove-comments \
             --minify-css true \
-            --minify-js "{
-              'mangle': true,
-              'compress': true
-            }" \
-            --file-ext html \
+            --minify-js '{"mangle":true,"compress":true}' \
             --input-dir ./ \
             --output-dir dist \
             --html5 true \
