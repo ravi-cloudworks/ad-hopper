@@ -5,7 +5,7 @@
     "deadCodeInjection": true,
     "deadCodeInjectionThreshold": 0.4,
     "debugProtection": true,
-    "debugProtectionInterval": 1000,    // Changed from true to a number
+    "debugProtectionInterval": 1000,    
     "disableConsoleOutput": false,
     "identifierNamesGenerator": "hexadecimal",
     "log": false,
