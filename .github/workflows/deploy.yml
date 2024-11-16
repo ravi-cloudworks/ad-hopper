@@ -43,9 +43,12 @@ jobs:
             --remove-comments \
             --minify-css true \
             --minify-js '{"mangle":true,"compress":true}' \
+            --remove-redundant-attributes \
+            --remove-script-type-attributes \
+            --remove-style-link-type-attributes \
+            --use-short-doctype \
             --input-dir ./ \
             --output-dir dist \
-            --html5 true \
             index.html
 
       - name: Deploy to GitHub Pages
