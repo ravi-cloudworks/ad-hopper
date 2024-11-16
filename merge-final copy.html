@@ -1,0 +1,1354 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced Video Merger</title>
+    <style>
+        :root {
+            --primary-color: #3498db;
+            --danger-color: #e74c3c;
+            --success-color: #2ecc71;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .drag-zone {
+            border: 3px dashed #ccc;
+            padding: 40px;
+            text-align: center;
+            background-color: white;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .drag-zone.drag-over {
+            border-color: var(--primary-color);
+            background-color: rgba(52, 152, 219, 0.1);
+        }
+
+        .drag-zone p {
+            margin: 0;
+            font-size: 18px;
+            color: #666;
+        }
+
+        .video-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .video-item {
+            position: relative;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            cursor: move;
+        }
+
+        .video-thumbnail {
+            width: 100%;
+            aspect-ratio: 16/9;
+            background: #eee;
+            position: relative;
+        }
+
+        .video-thumbnail video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .video-info {
+            padding: 10px;
+        }
+
+        .video-title {
+            margin: 0;
+            font-size: 14px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .video-duration {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .progress-bar {
+            height: 4px;
+            background-color: #eee;
+            border-radius: 2px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background-color: var(--primary-color);
+            transition: width 0.3s ease;
+        }
+
+        .delete-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background-color: var(--danger-color);
+            color: white;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0.8;
+            transition: opacity 0.3s ease;
+        }
+
+        .delete-btn:hover {
+            opacity: 1;
+        }
+
+        .merge-btn {
+            display: block;
+            width: 100%;
+            padding: 15px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .merge-btn:hover {
+            background-color: #2980b9;
+        }
+
+        .merge-btn:disabled {
+            background-color: #bdc3c7;
+            cursor: not-allowed;
+        }
+
+        .dragging {
+            opacity: 0.5;
+        }
+
+        .drag-over {
+            transform: scale(1.02);
+        }
+
+        @keyframes processing {
+            0% {
+                background-position: 0% 50%;
+            }
+
+            100% {
+                background-position: 100% 50%;
+            }
+        }
+
+        .processing .progress-bar-fill {
+            background: linear-gradient(90deg, var(--primary-color), var(--success-color), var(--primary-color));
+            background-size: 200% 100%;
+            animation: processing 2s linear infinite;
+        }
+
+        .video-item.placeholder {
+            opacity: 0.7;
+        }
+
+        .video-item.placeholder .video-thumbnail {
+            background: #f0f0f0;
+            animation: pulse 2s infinite;
+        }
+
+        .video-item.processing .video-thumbnail {
+            position: relative;
+        }
+
+        .video-item.processing .video-thumbnail::after {
+            content: "Processing...";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        @keyframes pulse {
+            0% {
+                background-color: #f0f0f0;
+            }
+
+            50% {
+                background-color: #e0e0e0;
+            }
+
+            100% {
+                background-color: #f0f0f0;
+            }
+        }
+
+        /* Add styles for toast notifications */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+
+        .toast {
+            background-color: #333;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            opacity: 0;
+            transform: translateX(100%);
+            animation: slideIn 0.3s forwards;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .toast.error {
+            background-color: #e74c3c;
+        }
+
+        .toast.warning {
+            background-color: #f1c40f;
+            color: #2c3e50;
+        }
+
+        .toast.success {
+            background-color: #2ecc71;
+        }
+
+        @keyframes slideIn {
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes slideOut {
+            to {
+                opacity: 0;
+                transform: translateX(100%);
+            }
+        }
+
+        /* Add styles for error state */
+        .video-item.error {
+            border: 2px solid #e74c3c;
+            animation: shake 0.5s ease-in-out;
+        }
+
+        .video-item.error .video-thumbnail::after {
+            content: "Error processing video";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(231, 76, 60, 0.9);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            white-space: nowrap;
+        }
+
+        .retry-btn {
+            position: absolute;
+            bottom: 8px;
+            right: 8px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 4px 8px;
+            font-size: 12px;
+            cursor: pointer;
+            display: none;
+        }
+
+        .video-item.error .retry-btn {
+            display: block;
+        }
+
+        @keyframes shake {
+
+            0%,
+            100% {
+                transform: translateX(0);
+            }
+
+            25% {
+                transform: translateX(-5px);
+            }
+
+            75% {
+                transform: translateX(5px);
+            }
+        }
+
+        .merge-btn-container {
+            position: relative;
+            width: 100%;
+        }
+
+        .merge-btn[disabled] {
+            cursor: not-allowed;
+        }
+
+        .merge-tooltip {
+            display: none;
+            /* Hide by default */
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #2c3e50;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            margin-bottom: 8px;
+            white-space: nowrap;
+            pointer-events: none;
+        }
+
+        .merge-btn-container:hover .merge-tooltip {
+            display: block;
+            /* Show on hover */
+        }
+
+        .merge-tooltip::after {
+            content: '';
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            border-width: 5px;
+            border-style: solid;
+            border-color: #2c3e50 transparent transparent transparent;
+        }
+
+        .merge-btn[disabled]:hover+.merge-tooltip {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .drag-zone .format-info {
+            margin-top: 10px;
+            font-size: 12px;
+            color: #666;
+        }
+
+        /* Add new styles for sorting indicators */
+        .video-list {
+            position: relative;
+            /* Keep existing grid styles */
+        }
+
+        .video-item {
+            position: relative;
+            /* Keep existing styles */
+        }
+
+        /* Position indicator in corner */
+        .video-item::before {
+            content: attr(data-position);
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            z-index: 10;
+        }
+
+        /* Style for item being dragged */
+        .sortable-ghost {
+            opacity: 0.3;
+            background: #f1f1f1;
+        }
+
+        /* Style for drag placeholder */
+        .sortable-drag {
+            opacity: 0.8;
+            transform: scale(1.05);
+            background: white;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Grid lines overlay during drag */
+        .grid-overlay {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image:
+                linear-gradient(to right, rgba(52, 152, 219, 0.1) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(52, 152, 219, 0.1) 1px, transparent 1px);
+            background-size: calc(100% / 4) calc(100% / 3);
+            /* Adjust based on your grid */
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        /* Position preview tooltip */
+        .position-tooltip {
+            position: fixed;
+            background: #2c3e50;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            pointer-events: none;
+            z-index: 1000;
+            display: none;
+        }
+
+        /* Fade effect for non-target items during drag */
+        .video-list.dragging .video-item:not(.sortable-ghost):not(.sortable-drag) {
+            opacity: 0.6;
+            transition: opacity 0.2s ease;
+        }
+    </style>
+    <script src="/assets/ffmpeg/package/dist/umd/ffmpeg.js"></script>
+    <script src="/assets/util/package/dist/umd/index.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+</head>
+
+<body>
+    <div class="container">
+        <div class="drag-zone" id="dragZone">
+            <p>Drag and drop video files here<br>or click to select files</p>
+            <div class="format-info">Supported formats: MP4 (H.264)</div>
+            <div class="format-info">Works Fastest for 1280x720, for others may take a few moments to respond… :)</div>
+            <div class="format-info">Maximum 3 Minutes, Size -??, Length - ?? </div>
+
+            <input type="file" id="fileInput" multiple accept="video/mp4" style="display: none">
+        </div>
+
+        <div class="video-list" id="videoList"></div>
+
+        <div class="merge-btn-container">
+            <button class="merge-btn" id="mergeBtn" disabled data-tooltip="Add at least 2 videos to merge">
+                Merge Videos
+            </button>
+            <div class="merge-tooltip"></div>
+        </div>
+        <button class="clear-btn" id="clearBtn" style="margin-top: 10px;">
+            Clear All Videos
+        </button>
+    </div>
+
+
+    <div class="toast-container" id="toastContainer"></div>
+    <script>
+        const { fetchFile } = FFmpegUtil;
+        const { FFmpeg } = FFmpegWASM;
+        let ffmpeg = null;
+
+
+        const ALLOWED_FORMATS = {
+            'video/mp4': '.mp4'
+        };
+
+        // Store processed videos
+        const processedVideos = new Map(); // key: file name, value: { tsFile, duration, thumbnail }
+
+        const processingQueue = new Map();
+
+        const dragZone = document.getElementById('dragZone');
+        const fileInput = document.getElementById('fileInput');
+        const videoList = document.getElementById('videoList');
+        const mergeBtn = document.getElementById('mergeBtn');
+
+        let sortable;
+
+        async function initFFmpeg() {
+            if (!ffmpeg) {
+                ffmpeg = new FFmpeg();
+                ffmpeg.on("log", ({ message }) => {
+                    console.log(message);
+                });
+                await ffmpeg.load({
+                    coreURL: "/assets/core/package/dist/umd/ffmpeg-core.js",
+                });
+            }
+
+            // Initialize Sortable only once
+            if (!sortable) {
+                sortable = new Sortable(videoList, {
+                    animation: 150,
+                    ghostClass: 'sortable-ghost',
+                    dragClass: 'sortable-drag',
+                    forceFallback: true,
+                    fallbackOnBody: true,
+
+                    onStart: function (evt) {
+                        videoList.classList.add('dragging');
+                        gridOverlay.style.display = 'block';
+                        updatePositionNumbers();
+                    },
+
+                    onMove: function (evt) {
+                        const items = Array.from(videoList.children);
+                        const newPos = evt.related ? items.indexOf(evt.related) + 1 : items.length;
+
+                        positionTooltip.textContent = `Moving to position ${newPos}`;
+                        positionTooltip.style.display = 'block';
+                        positionTooltip.style.left = evt.originalEvent.pageX + 10 + 'px';
+                        positionTooltip.style.top = evt.originalEvent.pageY + 10 + 'px';
+
+                        if (evt.related) {
+                            evt.related.style.transform = 'scale(1.02)';
+                        }
+                    },
+
+                    onEnd: function (evt) {
+                        videoList.classList.remove('dragging');
+                        gridOverlay.style.display = 'none';
+                        positionTooltip.style.display = 'none';
+                        updatePositionNumbers();
+
+                        Array.from(videoList.children).forEach(item => {
+                            item.style.transform = '';
+                        });
+                        // Important: Update processed videos order
+                        const newOrder = new Map();
+                        Array.from(videoList.children)
+                            .filter(item => item.classList.contains('video-item'))
+                            .forEach(item => {
+                                const filename = item.querySelector('.video-title').textContent;
+                                const fileInfo = processedVideos.get(filename);
+                                if (fileInfo) {
+                                    newOrder.set(filename, fileInfo);
+                                }
+                            });
+
+                        // Replace the old map with new ordered map
+                        processedVideos.clear();
+                        newOrder.forEach((value, key) => {
+                            processedVideos.set(key, value);
+                        });
+
+                        console.log('Updated video order:', Array.from(processedVideos.keys()));
+
+                    },
+
+                    onChange: function (evt) {
+                        updatePositionNumbers();
+                    }
+                });
+            }
+        }
+        function showToast(message, type = 'info', duration = 3000) {
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.style.maxWidth = '400px'; // Limit toast width
+            toast.style.wordBreak = 'break-word'; // Allow long messages to wrap
+            toast.textContent = message;
+
+            const container = document.getElementById('toastContainer');
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.animation = 'slideOut 0.3s forwards';
+                setTimeout(() => {
+                    container.removeChild(toast);
+                }, 300);
+            }, duration);
+        }
+
+
+        function isValidVideoFormat(file) {
+            // Check MIME type
+            if (!ALLOWED_FORMATS[file.type]) {
+                return {
+                    valid: false,
+                    reason: `Invalid format: ${file.type || 'unknown'}. Only MP4 files are supported.`
+                };
+            }
+
+            // Check file extension
+            const extension = file.name.toLowerCase().split('.').pop();
+            if (extension !== 'mp4') {
+                return {
+                    valid: false,
+                    reason: `Invalid file extension: .${extension}. Only .mp4 files are supported.`
+                };
+            }
+
+            return {
+                valid: true
+            };
+        }
+
+
+
+        dragZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            dragZone.classList.add('drag-over');
+        });
+
+        dragZone.addEventListener('dragleave', () => {
+            dragZone.classList.remove('drag-over');
+        });
+
+        dragZone.addEventListener('drop', async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            dragZone.classList.remove('drag-over');
+
+            const files = Array.from(e.dataTransfer.files);
+            const invalidFiles = files.filter(file => !isValidVideoFormat(file).valid);
+
+            if (invalidFiles.length > 0) {
+                showToast('Only MP4 files are supported', 'error');
+                // Still process any valid files that were dropped
+                await handleFiles(files);
+                return;
+            }
+
+            await handleFiles(files);
+        });
+
+        dragZone.addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        fileInput.addEventListener('change', async () => {
+            await handleFiles(fileInput.files);
+            fileInput.value = ''; // Reset input to allow selecting the same file again
+        });
+
+        async function handleFiles(files) {
+            await initFFmpeg();
+
+            // Filter valid video files and check for duplicates
+            const validFiles = Array.from(files).filter(file => {
+                const formatCheck = isValidVideoFormat(file);
+
+                if (!formatCheck.valid) {
+                    showToast(formatCheck.reason, 'error');
+                    return false;
+                }
+                // Size check
+                const sizeCheck = VideoValidator.checkFileSize(file);
+                if (!sizeCheck.valid) {
+                    showToast(sizeCheck.reason, 'error');
+                    return false;
+                }
+
+                // File count check
+                const countCheck = VideoValidator.checkFileCount(processedVideos.size);
+                if (!countCheck.valid) {
+                    showToast(countCheck.reason, 'error');
+                    return false;
+                }
+
+                if (processedVideos.has(file.name)) {
+                    showToast(`${file.name} has already been added`, 'warning');
+                    return false;
+                }
+
+                if (Array.from(videoList.children).some(item => item.dataset.filename === file.name)) {
+                    showToast(`${file.name} is already being processed`, 'warning');
+                    return false;
+                }
+
+                return true;
+            });
+
+            if (validFiles.length === 0) {
+                return;
+            }
+
+            // Show placeholders for all valid files
+            validFiles.forEach(file => {
+                const videoItem = createVideoItem(file);
+                videoItem.classList.add('placeholder');
+                videoList.appendChild(videoItem);
+                updatePositionNumbers(); // Update numbers after adding each item
+            });
+
+            // Process each fileposition
+            for (const file of validFiles) {
+                const videoItem = document.querySelector(`[data-filename="${file.name}"]`);
+                processingQueue.set(file.name, { abort: false });
+
+                try {
+                    videoItem.classList.remove('placeholder');
+                    videoItem.classList.add('processing');
+                    updateMergeButton(); // Update while processing
+                    await processVideo(file, videoItem);
+                    updateMergeButton(); // Update after successful processing
+                    showToast(`Successfully processed ${file.name}`, 'success');
+                } catch (error) {
+                    await handleProcessingError(error, file, videoItem);
+                    updateMergeButton(); // Update after error
+                    continue;
+                }
+            }
+        }
+
+        async function handleProcessingError(error, file, videoItem) {
+            console.error(`Error processing ${file.name}:`, error);
+
+            // Clear any existing processing state
+            videoItem.classList.remove('processing', 'placeholder');
+            videoItem.classList.add('error');
+
+            // Update progress bar to show error state
+            const progressBar = videoItem.querySelector('.progress-bar-fill');
+            progressBar.style.width = '100%';
+            progressBar.style.backgroundColor = '#e74c3c';
+
+            // Show appropriate error message to user
+            let errorMessage;
+            if (error.message === 'Processing aborted') {
+                errorMessage = `Processing cancelled for ${file.name}`;
+            } else if (error.message === 'Failed to load video metadata' || error.message === 'Video load timeout') {
+                errorMessage = `${file.name} appears to be corrupt or invalid`;
+            } else if (error.message === 'Invalid video duration') {
+                errorMessage = `${file.name} has an invalid duration`;
+            } else if (error.message === 'Invalid video dimensions') {
+                errorMessage = `${file.name} has invalid dimensions`;
+            } else if (error.message.includes('Failed to process video')) {
+                errorMessage = `Failed to process ${file.name}. The file may be corrupt`;
+            } else {
+                errorMessage = `Error processing ${file.name}`;
+            }
+
+            showToast(errorMessage, 'error');
+
+            // Clean up any partial processing data
+            processedVideos.delete(file.name);
+            processingQueue.delete(file.name);
+        }
+
+        function createVideoItem(file) {
+            const item = document.createElement('div');
+            item.className = 'video-item';
+            item.draggable = true;
+            item.dataset.filename = file.name;
+
+            // Position will be set by updatePositionNumbers()
+            item.innerHTML = `
+        <div class="video-thumbnail">
+            <video></video>
+            <button class="delete-btn">×</button>
+            <button class="retry-btn">Retry</button>
+        </div>
+        <div class="video-info">
+            <h3 class="video-title">${file.name}</h3>
+            <div class="video-duration"></div>
+            <div class="progress-bar">
+                <div class="progress-bar-fill" style="width: 0%"></div>
+            </div>
+        </div>
+    `;
+
+            // Setup delete button
+            item.querySelector('.delete-btn').addEventListener('click', () => {
+                const queueItem = processingQueue.get(file.name);
+                if (queueItem) {
+                    queueItem.abort = true;
+                }
+                processedVideos.delete(file.name);
+                item.remove();
+                updatePositionNumbers(); // Update numbers after removing item
+                updateMergeButton();
+            });
+
+            // Setup retry button... (rest remains the same)
+            return item;
+        }
+
+        async function processVideo(file, videoItem) {
+            const progressBar = videoItem.querySelector('.progress-bar-fill');
+            const video = videoItem.querySelector('video');
+            const queueItem = processingQueue.get(file.name);
+
+            try {
+                // Create video preview
+                const videoUrl = URL.createObjectURL(file);
+                video.src = videoUrl;
+
+                // Add error handling for video loading
+                await new Promise((resolve, reject) => {
+                    video.addEventListener('loadedmetadata', resolve);
+                    video.addEventListener('error', () => reject(new Error('Failed to load video metadata')));
+                    setTimeout(() => reject(new Error('Video load timeout')), 10000);
+                });
+
+                if (queueItem?.abort) {
+                    throw new Error('Processing aborted');
+                }
+
+                // Validate video duration and dimensions
+                if (video.duration === 0 || video.duration === Infinity) {
+                    throw new Error('Invalid video duration');
+                }
+
+                if (video.videoWidth === 0 || video.videoHeight === 0) {
+                    throw new Error('Invalid video dimensions');
+                }
+
+                const duration = video.duration;
+                const width = video.videoWidth;
+                const height = video.videoHeight;
+
+                videoItem.querySelector('.video-duration').textContent =
+                    `${Math.floor(duration / 60)}:${Math.floor(duration % 60).toString().padStart(2, '0')}`;
+
+                const sanitizedName = sanitizeFileName(file.name);
+                const inputName = `input_${sanitizedName}`;
+                const tsName = `temp_${sanitizedName}.ts`;
+
+                console.log(`Processing ${file.name} as ${tsName}`);
+
+                await ffmpeg.writeFile(inputName, await fetchFile(file));
+
+                if (queueItem?.abort) {
+                    throw new Error('Processing aborted');
+                }
+
+                // Check for audio using HTMLVideoElement
+                const hasAudio = video.mozHasAudio ||
+                    Boolean(video.webkitAudioDecodedByteCount) ||
+                    Boolean(video.audioTracks && video.audioTracks.length);
+
+                console.log(`Video ${file.name} has audio: ${hasAudio}`);
+
+                const needsVideoConversion = width !== 1280 || height !== 720;
+
+                try {
+                    if (!needsVideoConversion) {
+                        if (hasAudio) {
+                            // Video size is correct and has audio
+                            await ffmpeg.exec([
+                                '-i', inputName,
+                                '-c:v', 'copy',
+                                '-c:a', 'aac',
+                                '-ac', '2',
+                                '-ar', '44100',
+                                '-b:a', '128k',
+                                '-bsf:v', 'h264_mp4toannexb',
+                                '-f', 'mpegts',
+                                tsName
+                            ]);
+                        } else {
+                            // Video size is correct but no audio - add silent audio
+                            await ffmpeg.exec([
+                                '-i', inputName,
+                                '-f', 'lavfi',
+                                '-i', 'anullsrc=r=44100:cl=stereo',
+                                '-c:v', 'copy',
+                                '-c:a', 'aac',
+                                '-ac', '2',
+                                '-ar', '44100',
+                                '-b:a', '128k',
+                                '-shortest',
+                                '-bsf:v', 'h264_mp4toannexb',
+                                '-f', 'mpegts',
+                                tsName
+                            ]);
+                        }
+                    } else {
+                        if (hasAudio) {
+                            // Need to resize video and has audio
+                            await ffmpeg.exec([
+                                '-i', inputName,
+                                '-vf', 'scale=1280:720:force_original_aspect_ratio=1,pad=1280:720:(ow-iw)/2:(oh-ih)/2:black',
+                                '-c:v', 'libx264',
+                                '-profile:v', 'main',
+                                '-preset', 'ultrafast',
+                                '-c:a', 'aac',
+                                '-ac', '2',
+                                '-ar', '44100',
+                                '-b:a', '128k',
+                                '-bsf:v', 'h264_mp4toannexb',
+                                '-f', 'mpegts',
+                                tsName
+                            ]);
+                        } else {
+                            // Need to resize video and no audio - add silent audio
+                            await ffmpeg.exec([
+                                '-i', inputName,
+                                '-f', 'lavfi',
+                                '-i', 'anullsrc=r=44100:cl=stereo',
+                                '-vf', 'scale=1280:720:force_original_aspect_ratio=1,pad=1280:720:(ow-iw)/2:(oh-ih)/2:black',
+                                '-c:v', 'libx264',
+                                '-profile:v', 'main',
+                                '-preset', 'ultrafast',
+                                '-c:a', 'aac',
+                                '-ac', '2',
+                                '-ar', '44100',
+                                '-b:a', '128k',
+                                '-shortest',
+                                '-bsf:v', 'h264_mp4toannexb',
+                                '-f', 'mpegts',
+                                tsName
+                            ]);
+                        }
+                    }
+                } catch (ffmpegError) {
+                    throw new Error('Failed to process video: ' + ffmpegError.message);
+                }
+
+                processedVideos.set(file.name, {
+                    tsFile: tsName,
+                    duration: duration,
+                    thumbnail: videoUrl,
+                    dimensions: { width, height },
+                    hasAudio: true  // Since we now ensure all videos have audio (original or silent)
+                });
+
+                progressBar.style.width = '100%';
+                progressBar.parentElement.classList.add('processing');
+                videoItem.classList.remove('processing');
+
+            } catch (error) {
+                throw error;
+            }
+        }
+
+
+
+        function calculateEstimatedTime(fileSize, needsVideoConversion) {
+            // Base processing time in milliseconds
+            const baseTime = 2000;
+            // Additional time based on file size (1 second per 5MB)
+            const sizeTime = (fileSize / (5 * 1024 * 1024)) * 1000;
+            // Additional time if video conversion is needed
+            const conversionTime = needsVideoConversion ? 5000 : 0;
+
+            return baseTime + sizeTime + conversionTime;
+        }
+
+        // Add position tooltip element
+        const positionTooltip = document.createElement('div');
+        positionTooltip.className = 'position-tooltip';
+        document.body.appendChild(positionTooltip);
+
+        // Add grid overlay element
+        const gridOverlay = document.createElement('div');
+        gridOverlay.className = 'grid-overlay';
+        videoList.appendChild(gridOverlay);
+
+        function setupDragAndDrop() {
+            const sortable = new Sortable(videoList, {
+                animation: 150,
+                ghostClass: 'sortable-ghost',
+                dragClass: 'sortable-drag',
+                forceFallback: true,
+                fallbackOnBody: true,
+
+                // Show grid and update indicators when drag starts
+                onStart: function (evt) {
+                    videoList.classList.add('dragging');
+                    gridOverlay.style.display = 'block';
+                    updatePositionNumbers();
+                },
+
+                // Update position tooltip during drag
+                onMove: function (evt) {
+                    const items = Array.from(videoList.children);
+                    const currentPos = items.indexOf(evt.dragged) + 1;
+                    const newPos = items.indexOf(evt.related) + 1;
+
+                    positionTooltip.textContent = `Moving to position ${newPos}`;
+                    positionTooltip.style.display = 'block';
+                    positionTooltip.style.left = evt.originalEvent.pageX + 10 + 'px';
+                    positionTooltip.style.top = evt.originalEvent.pageY + 10 + 'px';
+
+                    // Highlight drop target area
+                    evt.related.style.transform = 'scale(1.02)';
+                },
+
+                // Clean up after drag
+                onEnd: function (evt) {
+                    videoList.classList.remove('dragging');
+                    gridOverlay.style.display = 'none';
+                    positionTooltip.style.display = 'none';
+                    updatePositionNumbers();
+
+                    // Reset any transformations
+                    Array.from(videoList.children).forEach(item => {
+                        item.style.transform = '';
+                    });
+                },
+
+                // Handle drop completion
+                onChange: function (evt) {
+                    updatePositionNumbers();
+                }
+            });
+
+            return sortable;
+        }
+
+        // Update position numbers correctly
+        function updatePositionNumbers() {
+            const items = Array.from(videoList.children);
+            items.forEach((item, index) => {
+                item.setAttribute('data-position', index);
+            });
+        }
+
+
+        function getDragAfterElement(container, y) {
+            const draggableElements = [...container.querySelectorAll('.video-item:not(.dragging)')];
+
+            return draggableElements.reduce((closest, child) => {
+                const box = child.getBoundingClientRect();
+                const offset = y - box.top - box.height / 2;
+
+                if (offset < 0 && offset > closest.offset) {
+                    return { offset: offset, element: child };
+                } else {
+                    return closest;
+                }
+            }, { offset: Number.NEGATIVE_INFINITY }).element;
+        }
+
+        function updateMergeButton() {
+            const allVideos = Array.from(videoList.children);
+            const hasErrors = allVideos.some(item => item.classList.contains('error'));
+            const isProcessing = allVideos.some(item =>
+                item.classList.contains('processing') ||
+                item.classList.contains('placeholder')
+            );
+            const validVideoCount = processedVideos.size;
+
+            let tooltipText = 'Add at least 2 videos to merge';
+
+            if (hasErrors) {
+                mergeBtn.disabled = true;
+                tooltipText = 'Remove failed videos before merging';
+            } else if (isProcessing) {
+                mergeBtn.disabled = true;
+                tooltipText = 'Wait for all videos to finish processing';
+            } else if (validVideoCount < 2) {
+                mergeBtn.disabled = true;
+                tooltipText = 'Add at least 2 videos to merge';
+            } else {
+                mergeBtn.disabled = false;
+                tooltipText = 'Click to merge videos';
+            }
+
+            // Update the button's data attribute instead of directly manipulating the tooltip
+            mergeBtn.setAttribute('data-tooltip', tooltipText);
+
+            // If tooltip is visible, update its content
+            const tooltip = mergeBtn.parentElement.querySelector('.merge-tooltip');
+            if (tooltip) {
+                tooltip.textContent = tooltipText;
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const mergeBtn = document.getElementById('mergeBtn');
+            const tooltipContainer = mergeBtn.parentElement.querySelector('.merge-tooltip');
+
+            if (mergeBtn && tooltipContainer) {
+                mergeBtn.addEventListener('mouseenter', () => {
+                    tooltipContainer.textContent = mergeBtn.getAttribute('data-tooltip');
+                });
+            }
+        });
+
+        function sanitizeFileName(filename) {
+            return filename.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '_');
+        }
+
+
+        mergeBtn.addEventListener('click', async () => {
+            if (processedVideos.size < 2) return;
+
+            try {
+                mergeBtn.disabled = true;
+                mergeBtn.textContent = 'Merging videos...';
+                showToast('Starting video merge process...', 'info');
+
+                const videoItems = Array.from(videoList.children).filter(item =>
+                    item.classList.contains('video-item')
+                );
+
+                console.log('Found video items:', videoItems.length);
+
+                const orderedFiles = videoItems.map((item, index) => {
+                    const titleElement = item.querySelector('.video-title');
+                    if (!titleElement) {
+                        throw new Error(`Missing title element for video at position ${index + 1}`);
+                    }
+
+                    const filename = titleElement.textContent;
+                    const fileInfo = processedVideos.get(filename);
+                    if (!fileInfo || !fileInfo.tsFile) {
+                        throw new Error(`Missing processed data for "${filename}"`);
+                    }
+
+                    return fileInfo.tsFile;
+                });
+
+                console.log('Merging files in order:', orderedFiles);
+
+                // Join files with pipe for FFmpeg
+                const fileList = orderedFiles.join('|');
+                console.log('Merge command:', [
+                    '-i', `concat:${fileList}`,
+                    '-c', 'copy',
+                    '-bsf:a', 'aac_adtstoasc',
+                    '-y',
+                    'output.mp4'
+                ].join(' '));
+
+                // Execute merge command
+                await ffmpeg.exec([
+                    '-i', `concat:${fileList}`,
+                    '-c', 'copy',
+                    '-bsf:a', 'aac_adtstoasc',
+                    '-y',
+                    'output.mp4'
+                ]);
+
+                // Check output file
+                const data = await ffmpeg.readFile('output.mp4');
+                if (!data || data.length === 0) {
+                    throw new Error('Failed to generate output file');
+                }
+
+                console.log(`Output file size: ${(data.length / (1024 * 1024)).toFixed(2)} MB`);
+
+
+                            // Generate output filename with timings
+                const videos = Array.from(processedVideos.values());
+                const outputFilename = OutputFileGenerator.generate(videos);
+
+
+                // Create and download the file
+                const blob = new Blob([data], { type: 'video/mp4' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = outputFilename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+
+                // Only delete the output file, keep the .ts files
+                await ffmpeg.deleteFile('output.mp4');
+                showToast('Videos merged successfully!', 'success');
+
+            } catch (error) {
+                console.error('Error merging videos:', error);
+                showToast(`Error merging videos: ${error.message}`, 'error');
+            } finally {
+                mergeBtn.disabled = false;
+                mergeBtn.textContent = 'Merge Videos';
+            }
+        });
+
+        // Add the JavaScript handler
+        document.getElementById('clearBtn').addEventListener('click', async () => {
+            try {
+                // Clear all videos from UI
+                videoList.innerHTML = '';
+
+                // Clean up all temporary files
+                for (const [filename, fileInfo] of processedVideos) {
+                    if (fileInfo.tsFile) {
+                        await ffmpeg.deleteFile(fileInfo.tsFile);
+                    }
+                }
+
+                // Clear all data structures
+                processedVideos.clear();
+                processingQueue.clear();
+
+                // Reset merge button
+                updateMergeButton();
+
+                showToast('All videos cleared', 'success');
+            } catch (error) {
+                console.error('Error clearing videos:', error);
+                showToast('Error clearing some files', 'error');
+            }
+        });
+
+
+        // Add a cleanup function for when video is removed
+        function deleteVideo(filename) {
+            const fileInfo = processedVideos.get(filename);
+            if (fileInfo && fileInfo.tsFile) {
+                ffmpeg.deleteFile(fileInfo.tsFile).catch(console.error);
+            }
+            processedVideos.delete(filename);
+        }
+
+
+        const VideoValidator = {
+            // Configuration
+            config: {
+                maxFileSize: 10 * 1024 * 1024, // 10MB in bytes
+                maxDuration: 60, // 1 minute in seconds
+                totalMaxDuration: 180, // 3 minutes in seconds
+                totalMaxSize: 100 * 1024 * 1024, // 100MB in bytes
+                minDuration: 3, // 3 seconds
+                maxFiles: 10,
+                allowedFormats: {
+                    'video/mp4': '.mp4'
+                }
+            },
+
+            // Format validation (existing)
+            checkFormat(file) {
+                if (!this.config.allowedFormats[file.type]) {
+                    return {
+                        valid: false,
+                        reason: `Invalid format: ${file.type || 'unknown'}. Only MP4 files are supported.`
+                    };
+                }
+
+                const extension = file.name.toLowerCase().split('.').pop();
+                if (extension !== 'mp4') {
+                    return {
+                        valid: false,
+                        reason: `Invalid file extension: .${extension}. Only .mp4 files are supported.`
+                    };
+                }
+
+                return { valid: true };
+            },
+
+            // File size validation
+            checkFileSize(file) {
+                if (file.size > this.config.maxFileSize) {
+                    return {
+                        valid: false,
+                        reason: `File ${file.name} is too large (${(file.size / (1024 * 1024)).toFixed(1)}MB). Maximum size is ${this.config.maxFileSize / (1024 * 1024)}MB`
+                    };
+                }
+                return { valid: true };
+            },
+
+            // Duration validation
+            checkDuration(duration, filename) {
+                if (duration < this.config.minDuration) {
+                    return {
+                        valid: false,
+                        reason: `Video ${filename} is too short (${duration.toFixed(1)}s). Minimum duration is ${this.config.minDuration}s`
+                    };
+                }
+                if (duration > this.config.maxDuration) {
+                    return {
+                        valid: false,
+                        reason: `Video ${filename} is too long (${duration.toFixed(1)}s). Maximum duration is ${this.config.maxDuration}s`
+                    };
+                }
+                return { valid: true };
+            },
+
+            // Total duration validation
+            checkTotalDuration(existingVideos, newVideo) {
+                const totalDuration = existingVideos.reduce((sum, video) => sum + video.duration, 0) + newVideo.duration;
+                if (totalDuration > this.config.totalMaxDuration) {
+                    return {
+                        valid: false,
+                        reason: `Total duration would exceed ${this.config.totalMaxDuration}s limit (${totalDuration.toFixed(1)}s)`
+                    };
+                }
+                return { valid: true };
+            },
+
+            // Total size validation
+            checkTotalSize(existingVideos, newVideo) {
+                const totalSize = existingVideos.reduce((sum, video) => sum + video.size, 0) + newVideo.size;
+                if (totalSize > this.config.totalMaxSize) {
+                    return {
+                        valid: false,
+                        reason: `Total size would exceed ${this.config.totalMaxSize / (1024 * 1024)}MB limit (${(totalSize / (1024 * 1024)).toFixed(1)}MB)`
+                    };
+                }
+                return { valid: true };
+            },
+
+            // Max files validation
+            checkFileCount(currentCount) {
+                if (currentCount >= this.config.maxFiles) {
+                    return {
+                        valid: false,
+                        reason: `Maximum ${this.config.maxFiles} videos allowed`
+                    };
+                }
+                return { valid: true };
+            }
+        };
+
+        // Output Filename Generator
+        const OutputFileGenerator = {
+            formatDuration(seconds) {
+                const minutes = Math.floor(seconds / 60);
+                const remainingSeconds = Math.floor(seconds % 60);
+                return minutes > 0 ? `${minutes}m${remainingSeconds}s` : `${remainingSeconds}s`;
+            },
+
+            generateTimings(videos) {
+                let currentTime = 0;
+                return videos.map(video => {
+                    const start = this.formatDuration(currentTime);
+                    currentTime += video.duration;
+                    const end = this.formatDuration(currentTime);
+                    return `${start}-${end}`;
+                }).join('_');
+            },
+
+            generate(videos) {
+                const date = new Date().toISOString().split('T')[0];
+                const numClips = videos.length;
+                const totalDuration = this.formatDuration(videos.reduce((sum, v) => sum + v.duration, 0));
+                const timings = this.generateTimings(videos);
+
+                return `merged_${numClips}clips_${totalDuration}_(${timings})_${date}.mp4`;
+            }
+        };
+    </script>
+</body>
+
+</html>

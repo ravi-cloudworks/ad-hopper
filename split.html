@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Custom Video Player</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/plyr/3.6.8/plyr.min.css">
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background-color: #f0f0f0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .player-wrapper {
+            position: relative;
+            padding-bottom: 56.25%;
+            margin-bottom: 20px;
+        }
+        .plyr {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        .time-input {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .help-text {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+        .current-segment {
+            color: #007bff;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+        .debug-info {
+            font-family: monospace;
+            font-size: 12px;
+            color: #666;
+            margin-top: 10px;
+        }
+        .controls {
+            margin-top: 10px;
+        }
+        .btn {
+            padding: 8px 16px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .btn:hover {
+            background: #0056b3;
+        }
+        .btn:disabled {
+            background: #cccccc;
+            cursor: not-allowed;
+        }
+        .cooldown-message {
+            color: #dc3545;
+            font-size: 14px;
+            margin-top: 10px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Custom Video Player</h1>
+        <div class="player-wrapper">
+            <div id="player" 
+                 data-plyr-provider="youtube" 
+                 data-plyr-embed-id="ncnm3P2Tl28">
+            </div>
+        </div>
+        <input type="text" id="timeRanges" class="time-input" placeholder="Enter time ranges (e.g., 5s-11s,1m20s-1m30s,2m40s-2m50s)">
+        <div class="help-text">Format: Start-End times separated by commas. Use 's' for seconds and 'm' for minutes.</div>
+        <div class="controls">
+            <button id="playButton" class="btn" disabled>Play Segments</button>
+        </div>
+        <div id="currentSegment" class="current-segment"></div>
+        <div id="debugInfo" class="debug-info"></div>
+        <div id="cooldownMessage" class="cooldown-message">Please wait a moment before playing again.</div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/plyr/3.6.8/plyr.min.js"></script>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            let player = null;
+            let playerReady = false;
+            let timeRanges = [];
+            let currentRangeIndex = 0;
+            let seekPending = false;
+            let lastSeekTime = 0;
+            let checkInterval;
+            let isPlaying = false;
+            let lastPlayTime = 0;
+            const COOLDOWN_PERIOD = 3000; // 3 seconds cooldown
+            const playButton = document.getElementById('playButton');
+            const cooldownMessage = document.getElementById('cooldownMessage');
+
+            try {
+                player = new Plyr('#player', {
+                    controls: [
+                        'play-large', 'restart', 'rewind', 'play', 'fast-forward',
+                        'progress', 'current-time', 'duration', 'mute', 'volume',
+                        'captions', 'settings', 'pip', 'airplay', 'fullscreen'
+                    ],
+                    youtube: {
+                        noCookie: true,
+                        rel: 0,
+                        showinfo: 0,
+                        modestbranding: 1,
+                        playsinline: 1
+                    }
+                });
+            } catch (error) {
+                console.error('Player initialization failed:', error);
+            }
+
+            function parseTimeToSeconds(timeStr) {
+                let seconds = 0;
+                if (timeStr.includes('m')) {
+                    const [mins, secs] = timeStr.split('m');
+                    seconds += parseFloat(mins) * 60;
+                    if (secs) {
+                        seconds += parseFloat(secs.replace('s', ''));
+                    }
+                } else {
+                    seconds = parseFloat(timeStr.replace('s', ''));
+                }
+                return Math.round(seconds * 1000) / 1000;
+            }
+
+            function parseTimeRanges(input) {
+                try {
+                    return input.split(',').map(range => {
+                        const [start, end] = range.trim().split('-');
+                        return {
+                            start: parseTimeToSeconds(start),
+                            end: parseTimeToSeconds(end)
+                        };
+                    });
+                } catch (error) {
+                    console.error('Error parsing time ranges:', error);
+                    return [];
+                }
+            }
+
+            function formatTime(seconds) {
+                const mins = Math.floor(seconds / 60);
+                const secs = (seconds % 60).toFixed(1);
+                return mins > 0 ? `${mins}m${secs}s` : `${secs}s`;
+            }
+
+            function updateCurrentSegmentDisplay() {
+                if (timeRanges.length > 0) {
+                    const current = timeRanges[currentRangeIndex];
+                    document.getElementById('currentSegment').textContent = 
+                        `Playing: ${formatTime(current.start)} - ${formatTime(current.end)} ` +
+                        `(Segment ${currentRangeIndex + 1}/${timeRanges.length})`;
+                }
+            }
+
+            function updateDebugInfo(currentTime) {
+                if (timeRanges.length > 0) {
+                    const current = timeRanges[currentRangeIndex];
+                    document.getElementById('debugInfo').textContent = 
+                        `Current Time: ${formatTime(currentTime)} | ` +
+                        `Target End: ${formatTime(current.end)}`;
+                }
+            }
+
+            function showCooldownMessage() {
+                cooldownMessage.style.display = 'block';
+                playButton.disabled = true;
+                setTimeout(() => {
+                    cooldownMessage.style.display = 'none';
+                    playButton.disabled = timeRanges.length === 0;
+                }, COOLDOWN_PERIOD);
+            }
+
+            async function seekToTime(time) {
+                if (!player || !playerReady) return;
+                
+                const now = Date.now();
+                if (now - lastSeekTime < 200) return;
+                
+                lastSeekTime = now;
+                seekPending = true;
+                try {
+                    player.currentTime = time;
+                } catch (error) {
+                    console.error('Seek failed:', error);
+                }
+                
+                await new Promise(resolve => setTimeout(resolve, 200));
+                seekPending = false;
+            }
+
+            function startTimeCheck() {
+                if (checkInterval) {
+                    clearInterval(checkInterval);
+                }
+                checkInterval = setInterval(checkTimeAndUpdate, 100);
+            }
+
+            function stopTimeCheck() {
+                if (checkInterval) {
+                    clearInterval(checkInterval);
+                    checkInterval = null;
+                }
+            }
+
+            function stopPlayback() {
+                isPlaying = false;
+                stopTimeCheck();
+                if (player && playerReady) {
+                    try {
+                        player.pause();
+                    } catch (error) {
+                        console.error('Pause failed:', error);
+                    }
+                }
+                playButton.textContent = 'Play Segments';
+                document.getElementById('currentSegment').textContent = '';
+                document.getElementById('debugInfo').textContent = '';
+                
+                lastPlayTime = Date.now();
+                showCooldownMessage();
+            }
+
+            function checkTimeAndUpdate() {
+                if (!player || !playerReady || timeRanges.length === 0 || seekPending || !isPlaying) return;
+
+                const currentTime = player.currentTime;
+                const currentRange = timeRanges[currentRangeIndex];
+                
+                updateDebugInfo(currentTime);
+
+                if (currentTime < currentRange.start) {
+                    seekToTime(currentRange.start);
+                    return;
+                }
+
+                if (currentTime >= currentRange.end) {
+                    if (currentRangeIndex < timeRanges.length - 1) {
+                        currentRangeIndex++;
+                        updateCurrentSegmentDisplay();
+                        seekToTime(timeRanges[currentRangeIndex].start);
+                    } else {
+                        stopPlayback();
+                    }
+                    return;
+                }
+            }
+
+            async function startPlayback() {
+                if (!player || !playerReady || timeRanges.length === 0) return;
+                
+                const now = Date.now();
+                if (now - lastPlayTime < COOLDOWN_PERIOD) {
+                    showCooldownMessage();
+                    return;
+                }
+                
+                isPlaying = true;
+                currentRangeIndex = 0;
+                playButton.textContent = 'Stop';
+                
+                await seekToTime(timeRanges[0].start);
+                updateCurrentSegmentDisplay();
+                
+                try {
+                    player.muted = false;
+                    player.volume = 1;
+                    player.play();
+                    startTimeCheck();
+                } catch (error) {
+                    console.error('Playback failed:', error);
+                    stopPlayback();
+                }
+            }
+
+            document.getElementById('timeRanges').addEventListener('change', function(e) {
+                timeRanges = parseTimeRanges(e.target.value);
+                stopPlayback();
+            });
+
+            playButton.addEventListener('click', function() {
+                if (!isPlaying) {
+                    startPlayback();
+                } else {
+                    stopPlayback();
+                }
+            });
+
+            if (player) {
+                player.on('ready', () => {
+                    playerReady = true;
+                    playButton.disabled = timeRanges.length === 0;
+                    player.muted = false;
+                    player.volume = 1;
+                });
+
+                player.on('playing', () => {
+                    if (isPlaying && !checkInterval) {
+                        startTimeCheck();
+                    }
+                });
+
+                player.on('pause', () => {
+                    if (!isPlaying) {
+                        stopTimeCheck();
+                    }
+                });
+
+                player.on('ended', () => {
+                    stopPlayback();
+                });
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Universal Video Player</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+    }
+    video {
+      width: 100%;
+      max-width: 800px;
+      margin-top: 20px;
+    }
+    iframe {
+      width: 100%;
+      max-width: 800px;
+      height: 450px;
+    }
+    input {
+      margin: 10px;
+      padding: 10px;
+      width: 90%;
+      max-width: 500px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Universal Video Player</h1>
+  <input id="videoUrl" type="text" placeholder="Enter YouTube, MP4, or M3U8 URL" />
+  <button onclick="playVideo()">Play Video</button>
+  <div id="videoContainer"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+  <script src="script.js"></script>
+</body>
+</html>
