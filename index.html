@@ -459,6 +459,34 @@
             text-align: center;
             max-width: 90%;
         }
+
+        .drag-zone.loading {
+            background-color: #f8f9fa;
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+
+        .drag-zone.loading::after {
+            content: '';
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-top: 20px;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
     </style>
     <script src="./assets/ffmpeg/package/dist/umd/ffmpeg.js"></script>
     <script src="./assets/util/package/dist/umd/index.js"></script>
@@ -515,21 +543,55 @@
 
         let sortable;
 
+        // Add loading state management
+        let isFFmpegLoaded = false;
+
+        // Update drag zone to show loading state
+
+        function updateDragZoneState(isLoading) {
+            const dragZone = document.getElementById('dragZone');
+            const loadingText = 'Loading FFmpeg...';
+            const defaultText = 'Drag and drop video files here<br>or click to select files';
+
+            if (isLoading) {
+                dragZone.classList.add('loading');
+                dragZone.querySelector('p').innerHTML = loadingText;
+                dragZone.style.pointerEvents = 'none'; // Disable interactions
+            } else {
+                dragZone.classList.remove('loading');
+                dragZone.querySelector('p').innerHTML = defaultText;
+                dragZone.style.pointerEvents = 'auto'; // Enable interactions
+            }
+        }
+
         async function initFFmpeg() {
             if (!ffmpeg) {
-                ffmpeg = new FFmpeg();
-                ffmpeg.on("log", ({ message }) => {
-                    console.log(message);
-                });
+                try {
+                    // Show loading state
+                    updateDragZoneState(true);
 
-                // For GitHub Pages, we need the full repository-based path
-                const basePath = window.location.pathname.includes('ad-hopper')
-                    ? '/ad-hopper'
-                    : '';
+                    ffmpeg = new FFmpeg();
+                    ffmpeg.on("log", ({ message }) => {
+                        console.log(message);
+                    });
 
-                await ffmpeg.load({
-                    coreURL: `${basePath}/assets/core/package/dist/umd/ffmpeg-core.js`,
-                });
+                    const basePath = window.location.pathname.includes('ad-hopper')
+                        ? '/ad-hopper'
+                        : '';
+
+                    await ffmpeg.load({
+                        coreURL: `${basePath}/assets/core/package/dist/umd/ffmpeg-core.js`,
+                    });
+
+                    isFFmpegLoaded = true;
+
+                    // Enable drag zone
+                    updateDragZoneState(false);
+                } catch (error) {
+                    console.error('Failed to load FFmpeg:', error);
+                    showToast('Failed to initialize video processor. Please refresh the page.', 'error');
+                    updateDragZoneState(false);
+                }
             }
 
             // Initialize Sortable only once
@@ -657,6 +719,11 @@
             e.stopPropagation();
             dragZone.classList.remove('drag-over');
 
+            if (!isFFmpegLoaded) {
+                showToast('Please wait for video processor to initialize', 'warning');
+                return;
+            }
+
             const files = Array.from(e.dataTransfer.files);
             const invalidFiles = files.filter(file => !isValidVideoFormat(file).valid);
 
@@ -671,6 +738,10 @@
         });
 
         dragZone.addEventListener('click', () => {
+            if (!isFFmpegLoaded) {
+                showToast('Please wait for video processor to initialize', 'warning');
+                return;
+            }
             fileInput.click();
         });
 
