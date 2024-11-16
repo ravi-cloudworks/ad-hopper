@@ -1,0 +1,53 @@
+# .github/workflows/deploy.yml
+
+name: Deploy with Minification
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '16'
+
+      - name: Install dependencies
+        run: |
+          npm init -y
+          npm install terser javascript-obfuscator --save-dev
+
+      - name: Minify and Obfuscate
+        run: |
+          # Create dist directory
+          mkdir -p dist
+          
+          # Copy all non-JS files
+          cp -r assets dist/
+          cp index.html dist/
+          
+          # Minify and obfuscate JavaScript
+          for file in $(find . -name "*.js" ! -path "./node_modules/*" ! -path "./dist/*"); do
+            # Create target directory
+            mkdir -p "dist/$(dirname $file)"
+            
+            # Obfuscate
+            npx javascript-obfuscator "$file" --output "dist/$file" --config ./.github/obfuscator.config.json
+            
+            # Minify the obfuscated file
+            npx terser "dist/$file" --compress --mangle --output "dist/$file"
+          done
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist
+          force_orphan: true
