@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>✨ Ad Hopper</title>
+    <title>✨ Ad Merger</title>
     <style>
         :root {
             --primary-color: #3498db;
@@ -496,6 +496,7 @@
 </head>
 
 <body>
+    <H1> Merger</H1>
     <div class="container">
         <div class="drag-zone" id="dragZone">
             <p>Drag and drop video files here<br>or click to select files</p>
@@ -503,12 +504,12 @@
             <div class="format-info">Maximum 10 files total</div>
             <div class="format-info">Upload up to 5 files at once</div>
             <hr>
-            Each File
+            Each Files
             <div class="format-info">Duration: Max 2 minutes per video</div>
-            <div class="format-info">Maximum file size: 20MB per video</div>
+            <div class="format-info">Maximum file size: 10MB per video</div>
             <hr>
             Output File
-            <div class="format-info">Maximum total duration: 10 minutes</div>
+            <div class="format-info">Maximum total duration: 5 minutes</div>
 
             <input type="file" id="fileInput" multiple accept="video/mp4" style="display: none">
         </div>
@@ -1362,15 +1363,15 @@
         // Configuration with your specific requirements
         config: {
             // Total output limit
-            totalMaxDuration: 600, // 10 minutes in seconds
+            totalMaxDuration: 300, // 5 minutes in seconds
     
             // Per-file duration limits
-            minDuration: 10,  // Changed from 3 to 10 seconds minimum
+            minDuration: 10,  //   10 seconds minimum
             maxDuration: 120,  // 120 seconds/2 minutes maximum per file
     
             // File size limits
             // maxFileSize: 20 * 1024 * 1024, // 10MB in bytes
-            maxFileSize: 2 * 20 * 1024 * 1024, // 20MB in bytes
+            maxFileSize: 1.5 * 20 * 1024 * 1024, // 10MB in bytes
     
             // Format restrictions
             allowedFormats: {
