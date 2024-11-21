@@ -1209,8 +1209,8 @@
         function updateTotalStats() {
             const videos = Array.from(processedVideos.values());
 
-            // Calculate total size
-            const totalBytes = videos.reduce((sum, video) => sum + (video.estimatedMp4Size || 0), 0);
+            // Calculate total size - use size instead of estimatedMp4Size
+            const totalBytes = videos.reduce((sum, video) => sum + (video.size || 0), 0);
             const totalMB = totalBytes / (1024 * 1024);
 
             // Calculate total duration
