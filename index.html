@@ -560,7 +560,7 @@
 
         <div class="merge-btn-container">
             <div class="merge-stats" id="mergeStats">
-               
+
             </div>
             <button class="merge-btn" id="mergeBtn" disabled data-tooltip="Add at least 2 videos to merge">
                 Merge Videos
@@ -1217,18 +1217,18 @@
         // Update the updateTotalSize function to be more precise
         function updateTotalStats() {
             const videos = Array.from(processedVideos.values());
-    
-    const totalBytes = videos.reduce((sum, video) => sum + (video.size || 0), 0);
-    const totalMB = totalBytes / (1024 * 1024);
-    
-    const totalSeconds = videos.reduce((sum, video) => sum + (video.duration || 0), 0);
-    const totalMinutes = Math.floor(totalSeconds / 60);
-    const remainingSeconds = Math.floor(totalSeconds % 60);
-    
-    const mergeStats = document.getElementById('mergeStats');
-    mergeStats.innerHTML = `
-        <div>Total Size (Approx): <span class="total-size ${totalMB > VIDEO_LIMITS.output.maxSize ? 'size-warning' : 'size-ok'}">${totalMB.toFixed(2)} MB</span> / ${VIDEO_LIMITS.output.maxSize} MB</div>
-        <div>Total Length (Approx): ${totalMinutes || 0}:${(remainingSeconds || 0).toString().padStart(2, '0')}</div>
+
+            const totalBytes = videos.reduce((sum, video) => sum + (video.size || 0), 0);
+            const totalMB = totalBytes / (1024 * 1024);
+
+            const totalSeconds = videos.reduce((sum, video) => sum + (video.duration || 0), 0);
+            const totalMinutes = Math.floor(totalSeconds / 60);
+            const remainingSeconds = Math.floor(totalSeconds % 60);
+
+            const mergeStats = document.getElementById('mergeStats');
+            mergeStats.innerHTML = `
+        <div>Total Size: <span class="total-size ${totalMB > VIDEO_LIMITS.output.maxSize ? 'size-warning' : 'size-ok'}">${totalMB.toFixed(2)} MB</span> / ${VIDEO_LIMITS.output.maxSize} MB</div>
+        <div>Total Length: ${totalMinutes || 0}:${(remainingSeconds || 0).toString().padStart(2, '0')} / ${Math.floor(VIDEO_LIMITS.output.maxDuration / 60)}:00</div>
     `;
 
             const mergeBtn = document.getElementById('mergeBtn');
