@@ -1228,7 +1228,7 @@
             const mergeStats = document.getElementById('mergeStats');
             mergeStats.innerHTML = `
         <div>Total Size: <span class="total-size ${totalMB > VIDEO_LIMITS.output.maxSize ? 'size-warning' : 'size-ok'}">${totalMB.toFixed(2)} MB</span> / ${VIDEO_LIMITS.output.maxSize} MB</div>
-        <div>Total Length: ${totalMinutes || 0}:${(remainingSeconds || 0).toString().padStart(2, '0')} / ${Math.floor(VIDEO_LIMITS.output.maxDuration / 60)}:00</div>
+        <div>Total Length: <span class="total-size ${totalSeconds > VIDEO_LIMITS.output.maxDuration ? 'size-warning' : 'size-ok'}">${totalMinutes || 0}:${(remainingSeconds || 0).toString().padStart(2, '0')}</span> / ${Math.floor(VIDEO_LIMITS.output.maxDuration / 60)}:00</div>
     `;
 
             const mergeBtn = document.getElementById('mergeBtn');
