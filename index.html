@@ -863,60 +863,64 @@
 
 
         const processingQueue = {
-            items: [],
-            isProcessing: false,
+    items: [],
+    isProcessing: false,
+    
+    async add(file) {
+        // Create waiting item immediately
+        const waitingItem = createVideoItem(file);
+        waitingItem.classList.add('waiting');
+        const statusDiv = document.createElement('div');
+        statusDiv.className = 'processing-text';
+        statusDiv.textContent = this.isProcessing ? 'Waiting...' : 'Processing...';
+        waitingItem.querySelector('.video-info').appendChild(statusDiv);
+        videoList.appendChild(waitingItem);
 
-            async add(file) {
-                this.items.push({
-                    file,
-                    abort: false
-                });
-                if (!this.isProcessing) {
-                    await this.processNext();
-                }
-            },
+        this.items.push({
+            file,
+            abort: false,
+            element: waitingItem
+        });
 
-            getItem(filename) {
-                return this.items.find(item => item.file.name === filename);
-            },
+        if (!this.isProcessing) {
+            await this.processNext();
+        }
+    },
 
-            removeItem(filename) {
-                this.items = this.items.filter(item => item.file.name !== filename);
-            },
+    getItem(filename) {
+        return this.items.find(item => item.file.name === filename);
+    },
 
-            async processNext() {
-                if (this.items.length === 0) {
-                    this.isProcessing = false;
-                    return;
-                }
+    removeItem(filename) {
+        const item = this.getItem(filename);
+        if (item && item.element) {
+            item.element.remove();
+        }
+        this.items = this.items.filter(item => item.file.name !== filename);
+    },
 
-                this.isProcessing = true;
-                const nextItem = this.items[0];
-                const videoItem = createVideoItem(nextItem.file);
-                videoList.appendChild(videoItem);
-
-                // Update waiting status for remaining items
-                this.items.slice(1).forEach(item => {
-                    const waitingItem = createVideoItem(item.file);
-                    waitingItem.classList.add('waiting');
-                    const statusDiv = document.createElement('div');
-                    statusDiv.className = 'processing-text';
-                    statusDiv.textContent = 'Waiting...';
-                    waitingItem.querySelector('.video-info').appendChild(statusDiv);
-                    videoList.appendChild(waitingItem);
-                });
-
-                try {
-                    await processVideo(nextItem.file, videoItem);
-                    this.items.shift();
-                    this.processNext();
-                } catch (error) {
-                    console.error('Processing error:', error);
-                    this.items.shift();
-                    this.processNext();
-                }
-            }
-        };
+    async processNext() {
+        if (this.items.length === 0) {
+            this.isProcessing = false;
+            return;
+        }
+        
+        this.isProcessing = true;
+        const nextItem = this.items[0];
+        
+        try {
+            nextItem.element.classList.remove('waiting');
+            nextItem.element.classList.add('processing');
+            await processVideo(nextItem.file, nextItem.element);
+            this.items.shift();
+            await this.processNext();
+        } catch (error) {
+            console.error('Processing error:', error);
+            this.items.shift();
+            await this.processNext();
+        }
+    }
+};
 
 
         async function handleFiles(files) {
