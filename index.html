@@ -984,7 +984,10 @@
                 return;
             }
 
-            // Pre-validation checks before adding to UI
+            // Collect valid files first
+            const validFiles = [];
+
+            // Pre-validation checks
             for (const file of Array.from(files)) {
                 try {
                     // Check format first
@@ -1025,49 +1028,40 @@
                         continue;
                     }
 
-                    // Check total duration
-                    // const totalDurationCheck = VideoValidator.checkTotalDuration(
-                    //     Array.from(processedVideos.values()),
-                    //     video.duration
-                    // );
-                    // if (!totalDurationCheck.valid) {
-                    //     showToast(totalDurationCheck.reason, 'error');
-                    //     continue;
-                    // }
-
-                    // If all checks pass, create video item and start processing
-
-
-
-                    try {
-                        const credits = await showCreditsModal(validFiles);
-
-                        // Continue with your existing process but now with credits
-                        for (const file of validFiles) {
-                            const creditText = credits[file.name] || 'Credits Not Available';
-                            // Continue with your existing video processing...
-                        }
-                    } catch (error) {
-                        showToast('Error processing credits', 'error');
-                    }
-
-
-
-
-
-                    const videoItem = createVideoItem(file);
-                    videoList.appendChild(videoItem);
-                    videoItem.classList.add('processing');
-
-                    try {
-                        await processVideo(file, videoItem);
-                        showToast(`Successfully processed ${file.name}`, 'success');
-                    } catch (processingError) {
-                        await handleProcessingError(processingError, file, videoItem);
-                    }
+                    // If all checks pass, add to valid files
+                    validFiles.push(file);
 
                 } catch (error) {
                     showToast(`Error with ${file.name}: ${error.message}`, 'error');
+                }
+            }
+
+            // If we have valid files, show credits modal
+            if (validFiles.length > 0) {
+                try {
+                    const credits = await showCreditsModal(validFiles);
+                    console.log('Credits received:', credits);
+
+                    // Process each file with its credits
+                    for (const file of validFiles) {
+                        const creditText = credits[file.name];
+                        // Create and process video item
+                        const videoItem = createVideoItem(file);
+                        videoList.appendChild(videoItem);
+                        videoItem.classList.add('processing');
+
+                        try {
+                            // Store credits with file info for processing
+                            file.creditText = creditText;
+                            await processVideo(file, videoItem);
+                            showToast(`Successfully processed ${file.name}`, 'success');
+                        } catch (processingError) {
+                            await handleProcessingError(processingError, file, videoItem);
+                        }
+                    }
+                } catch (error) {
+                    showToast('Error handling credits', 'error');
+                    console.error('Credits error:', error);
                 }
             }
 
