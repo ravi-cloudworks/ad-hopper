@@ -676,7 +676,21 @@
                     // console.log('FFmpeg version:', version);
 
 
-                    await ffmpeg.writeFile('/font.ttf', await fetch('/assets/fonts/roboto.ttf').then(r => r.arrayBuffer()));
+                    try {
+                        const fontPath = `${basePath}/assets/fonts/roboto.ttf`;
+                        const fontArrayBuffer = await fetch(fontPath)
+                            .then(response => {
+                                if (!response.ok) {
+                                    throw new Error(`HTTP error! status: ${response.status}`);
+                                }
+                                return response.arrayBuffer();
+                            });
+                        await ffmpeg.writeFile('font.ttf', new Uint8Array(fontArrayBuffer));
+                        console.log('Font loaded successfully');
+                    } catch (fontError) {
+                        console.error('Font loading error:', fontError);
+                        throw new Error('Failed to load font file');
+                    }
 
                     console.log('FFmpeg loaded successfully');
 
