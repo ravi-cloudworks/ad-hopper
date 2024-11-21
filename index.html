@@ -653,21 +653,71 @@
                 // Clear previous entries
                 creditsList.innerHTML = '';
 
+                // Add an entry for each file
+                files.forEach(file => {
+                    const itemDiv = document.createElement('div');
+                    itemDiv.className = 'credits-item';
+
+                    // Create preview section
+                    const previewDiv = document.createElement('div');
+                    previewDiv.className = 'video-preview';
+                    const video = document.createElement('video');
+                    video.src = URL.createObjectURL(file);
+                    previewDiv.appendChild(video);
+
+                    // Create content section
+                    const contentDiv = document.createElement('div');
+                    contentDiv.className = 'credits-content';
+                    contentDiv.innerHTML = `
+                <span class="filename">${file.name}</span>
+                <div class="credits-input-group">
+                    <input type="text" 
+                           maxlength="20" 
+                           placeholder="Enter video credits"
+                           class="credits-input"
+                           data-filename="${file.name}">
+                    <span class="char-count">0/20</span>
+                </div>
+            `;
+
+                    // Add to item
+                    itemDiv.appendChild(previewDiv);
+                    itemDiv.appendChild(contentDiv);
+                    creditsList.appendChild(itemDiv);
+                });
+
                 // Show modal
                 creditsModal.style.display = 'flex';
-                console.log('Modal opened with files:', files.length);
 
-                // Test buttons
+                // Handle character count
+                creditsList.addEventListener('input', (e) => {
+                    if (e.target.classList.contains('credits-input')) {
+                        const charCount = e.target.closest('.credits-input-group')
+                            .querySelector('.char-count');
+                        charCount.textContent = `${e.target.value.length}/20`;
+                    }
+                });
+
+                // Handle buttons
                 applyCreditsBtn.onclick = () => {
-                    console.log('Apply clicked');
+                    const credits = {};
+                    // Collect all input values
+                    document.querySelectorAll('.credits-input').forEach(input => {
+                        credits[input.dataset.filename] = input.value || 'Credits Not Available';
+                    });
                     creditsModal.style.display = 'none';
-                    resolve('test credits');
+                    console.log('Collected credits:', credits);
+                    resolve(credits);
                 };
 
                 useDefaultCreditsBtn.onclick = () => {
-                    console.log('Default clicked');
+                    const credits = {};
+                    files.forEach(file => {
+                        credits[file.name] = 'Credits Not Available';
+                    });
                     creditsModal.style.display = 'none';
-                    resolve('Credits Not Available');
+                    console.log('Using default credits for all');
+                    resolve(credits);
                 };
             });
         }
