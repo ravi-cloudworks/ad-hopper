@@ -1103,7 +1103,7 @@
                         if (hasAudio) {
                             await ffmpeg.exec([
                                 '-i', inputName,
-                                '-vf', 'drawtext=text=\'Created using Aristotle Deck Tool\':fontcolor=white:fontsize=24:box=1:boxcolor=black@0.5:x=(w-text_w)/2:y=h-th-10',
+                                '-vf', 'subtitles=subtitles.ass',
                                 '-c:v', 'libx264',
                                 '-preset', 'ultrafast',
                                 '-c:a', 'aac',
@@ -1119,7 +1119,7 @@
                                 '-i', inputName,
                                 '-f', 'lavfi',
                                 '-i', 'anullsrc=r=44100:cl=stereo',
-                                '-vf', 'drawtext=text=\'Created using Aristotle Deck Tool\':fontcolor=white:fontsize=24:box=1:boxcolor=black@0.5:x=(w-text_w)/2:y=h-th-10',
+                                '-vf', 'subtitles=subtitles.ass',
                                 '-c:v', 'libx264',
                                 '-preset', 'ultrafast',
                                 '-c:a', 'aac',
@@ -1136,7 +1136,7 @@
                         if (hasAudio) {
                             await ffmpeg.exec([
                                 '-i', inputName,
-                                '-vf', 'scale=1280:720:force_original_aspect_ratio=1,pad=1280:720:(ow-iw)/2:(oh-ih)/2:black,drawtext=text=\'Created using Aristotle Deck Tool\':fontcolor=white:fontsize=24:box=1:boxcolor=black@0.5:x=(w-text_w)/2:y=h-th-10',
+                                '-vf', 'scale=1280:720:force_original_aspect_ratio=1,pad=1280:720:(ow-iw)/2:(oh-ih)/2:black,subtitles=subtitles.ass',
                                 '-c:v', 'libx264',
                                 '-profile:v', 'main',
                                 '-preset', 'ultrafast',
@@ -1153,7 +1153,7 @@
                                 '-i', inputName,
                                 '-f', 'lavfi',
                                 '-i', 'anullsrc=r=44100:cl=stereo',
-                                '-vf', 'scale=1280:720:force_original_aspect_ratio=1,pad=1280:720:(ow-iw)/2:(oh-ih)/2:black,drawtext=text=\'Created using Aristotle Deck Tool\':fontcolor=white:fontsize=24:box=1:boxcolor=black@0.5:x=(w-text_w)/2:y=h-th-10',
+                                '-vf', 'scale=1280:720:force_original_aspect_ratio=1,pad=1280:720:(ow-iw)/2:(oh-ih)/2:black,subtitles=subtitles.ass',
                                 '-c:v', 'libx264',
                                 '-profile:v', 'main',
                                 '-preset', 'ultrafast',
