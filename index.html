@@ -661,10 +661,10 @@
                         coreURL: `${basePath}/assets/core/package/dist/umd/ffmpeg-core.js`,
                     });
 
-                    // Get FFmpeg version
-                    const { stdout } = await ffmpeg.exec(['-version']);
-                    const version = new TextDecoder().decode(stdout);
-                    console.log('FFmpeg version:', version);
+                    // // Get FFmpeg version
+                    // const { stdout } = await ffmpeg.exec(['-version']);
+                    // const version = new TextDecoder().decode(stdout);
+                    // console.log('FFmpeg version:', version);
 
 
                     console.log('FFmpeg loaded successfully');
