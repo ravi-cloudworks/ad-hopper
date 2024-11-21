@@ -540,7 +540,6 @@
             color: #27ae60;
         }
     </style>
-    <link rel="stylesheet" href="credit-modal.css">
     <script src="./assets/ffmpeg/package/dist/umd/ffmpeg.js"></script>
     <script src="./assets/util/package/dist/umd/index.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
@@ -575,23 +574,6 @@
 
 
     <div class="toast-container" id="toastContainer"></div>
-    <div class="credits-overlay" id="creditsModal" style="display: none;">
-        <div class="credits-modal">
-            <div class="credits-header">
-                <h3>Add Video Credits</h3>
-                <p class="credits-info">Please add source/credits for your videos</p>
-            </div>
-
-            <div class="credits-list" id="creditsList">
-                <!-- Will be populated dynamically -->
-            </div>
-
-            <div class="credits-actions">
-                <button class="credits-apply" id="applyCredits">Apply Custom Credits</button>
-                <button class="credits-default" id="useDefaultCredits">Use "Credits Not Available"</button>
-            </div>
-        </div>
-    </div>
     <script>
         const { fetchFile } = FFmpegUtil;
         const { FFmpeg } = FFmpegWASM;
@@ -633,12 +615,6 @@
         const videoList = document.getElementById('videoList');
         const mergeBtn = document.getElementById('mergeBtn');
 
-
-        const creditsModal = document.getElementById('creditsModal');
-        const creditsList = document.getElementById('creditsList');
-        const applyCreditsBtn = document.getElementById('applyCredits');
-        const useDefaultCreditsBtn = document.getElementById('useDefaultCredits');
-
         let sortable;
 
         // Add loading state management
@@ -646,37 +622,6 @@
 
         // Update drag zone to show loading state
 
-
-
-        function showCreditsModal(files) {
-            // Return a Promise that resolves with credits for each file
-            return new Promise((resolve) => {
-                // Clear previous entries
-                creditsList.innerHTML = '';
-
-                // Add entries for each file
-                files.forEach(file => {
-                    // Create preview and input for each file
-                });
-
-                // Show modal
-                creditsModal.style.display = 'flex';
-
-                // Handle button clicks
-                applyCreditsBtn.onclick = () => {
-                    // Collect all credits and resolve
-                    const credits = {};
-                    // Collect and return credits
-                    resolve(credits);
-                    creditsModal.style.display = 'none';
-                };
-
-                useDefaultCreditsBtn.onclick = () => {
-                    resolve('Credits Not Available');
-                    creditsModal.style.display = 'none';
-                };
-            });
-        }
 
         function formatFileSize(bytes) {
             return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
@@ -702,15 +647,6 @@
         // Initialize FFmpeg first when page loads
         document.addEventListener('DOMContentLoaded', async () => {
             await initFFmpeg();
-
-            // Add the console.log here
-            console.log('Modal elements:', {
-                creditsModal,
-                creditsList,
-                applyCreditsBtn,
-                useDefaultCreditsBtn
-            });
-
         });
 
 
@@ -986,25 +922,6 @@
                     // }
 
                     // If all checks pass, create video item and start processing
-
-
-
-                    try {
-                        const credits = await showCreditsModal(validFiles);
-
-                        // Continue with your existing process but now with credits
-                        for (const file of validFiles) {
-                            const creditText = credits[file.name] || 'Credits Not Available';
-                            // Continue with your existing video processing...
-                        }
-                    } catch (error) {
-                        showToast('Error processing credits', 'error');
-                    }
-
-
-
-
-
                     const videoItem = createVideoItem(file);
                     videoList.appendChild(videoItem);
                     videoItem.classList.add('processing');
