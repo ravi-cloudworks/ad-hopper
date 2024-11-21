@@ -1207,33 +1207,44 @@
         // Add function to calculate and update total size
         // Update the updateTotalSize function to be more precise
         function updateTotalStats() {
-            const videos = Array.from(processedVideos.values());
-
-            // Calculate total size - use size instead of estimatedMp4Size
-            const totalBytes = videos.reduce((sum, video) => sum + (video.size || 0), 0);
-            const totalMB = totalBytes / (1024 * 1024);
-
-            // Calculate total duration
-            const totalSeconds = videos.reduce((sum, video) => sum + (video.duration || 0), 0);
-            const totalMinutes = Math.floor(totalSeconds / 60);
-            const remainingSeconds = Math.floor(totalSeconds % 60);
-
-            // Update stats display
-            const mergeStats = document.getElementById('mergeStats');
-            mergeStats.innerHTML = `
+    const videos = Array.from(processedVideos.values());
+    
+    // Calculate total size
+    const totalBytes = videos.reduce((sum, video) => sum + (video.size || 0), 0);
+    const totalMB = totalBytes / (1024 * 1024);
+    
+    // Calculate total duration
+    const totalSeconds = videos.reduce((sum, video) => sum + (video.duration || 0), 0);
+    const totalMinutes = Math.floor(totalSeconds / 60);
+    const remainingSeconds = Math.floor(totalSeconds % 60);
+    
+    // Update stats display
+    const mergeStats = document.getElementById('mergeStats');
+    mergeStats.innerHTML = `
         <div>Total Size: <span class="total-size ${totalMB > 100 ? 'size-warning' : 'size-ok'}">${totalMB.toFixed(2)} MB</span> / 100 MB</div>
         <div>Total Length: ${totalMinutes}:${remainingSeconds.toString().padStart(2, '0')}</div>
     `;
 
-            // Update merge button state
-            const mergeBtn = document.getElementById('mergeBtn');
-            if (totalMB > 100) {
-                mergeBtn.disabled = true;
-                mergeBtn.setAttribute('data-tooltip', 'Total size exceeds 100 MB limit');
-            } else {
-                updateMergeButton();
-            }
-        }
+    // Update merge button state with both limits
+    const mergeBtn = document.getElementById('mergeBtn');
+    let tooltipText = '';
+
+    if (totalMB > 100) {
+        mergeBtn.disabled = true;
+        tooltipText = 'Total size exceeds 100 MB limit';
+    } else if (totalSeconds > 300) { // 5 minutes = 300 seconds
+        mergeBtn.disabled = true;
+        tooltipText = 'Total duration exceeds 5 minutes limit';
+    } else if (processedVideos.size < 2) {
+        mergeBtn.disabled = true;
+        tooltipText = 'Add at least 2 videos to merge';
+    } else {
+        mergeBtn.disabled = false;
+        tooltipText = 'Click to merge videos';
+    }
+
+    mergeBtn.setAttribute('data-tooltip', tooltipText);
+}
 
         // Add an estimation function for the final merged size
         function estimateMergedSize() {
