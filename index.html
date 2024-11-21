@@ -867,10 +867,21 @@
             isProcessing: false,
 
             async add(file) {
-                this.items.push(file);
+                this.items.push({
+                    file,
+                    abort: false
+                });
                 if (!this.isProcessing) {
-                    this.processNext();
+                    await this.processNext();
                 }
+            },
+
+            getItem(filename) {
+                return this.items.find(item => item.file.name === filename);
+            },
+
+            removeItem(filename) {
+                this.items = this.items.filter(item => item.file.name !== filename);
             },
 
             async processNext() {
@@ -880,13 +891,13 @@
                 }
 
                 this.isProcessing = true;
-                const nextFile = this.items[0];
-                const videoItem = createVideoItem(nextFile);
+                const nextItem = this.items[0];
+                const videoItem = createVideoItem(nextItem.file);
                 videoList.appendChild(videoItem);
 
-                // Add waiting status for remaining items
-                this.items.slice(1).forEach(file => {
-                    const waitingItem = createVideoItem(file);
+                // Update waiting status for remaining items
+                this.items.slice(1).forEach(item => {
+                    const waitingItem = createVideoItem(item.file);
                     waitingItem.classList.add('waiting');
                     const statusDiv = document.createElement('div');
                     statusDiv.className = 'processing-text';
@@ -896,7 +907,7 @@
                 });
 
                 try {
-                    await processVideo(nextFile, videoItem);
+                    await processVideo(nextItem.file, videoItem);
                     this.items.shift();
                     this.processNext();
                 } catch (error) {
@@ -1038,7 +1049,7 @@
             // Setup delete button
             item.querySelector('.delete-btn').addEventListener('click', () => {
                 const filename = item.querySelector('.video-title').textContent;
-                const queueItem = processingQueue.get(filename);
+                const queueItem = processingQueue.getItem(filename);
                 if (queueItem) {
                     queueItem.abort = true;
                 }
@@ -1055,7 +1066,7 @@
         async function processVideo(file, videoItem) {
             const progressBar = videoItem.querySelector('.progress-bar-fill');
             const video = videoItem.querySelector('video');
-            const queueItem = processingQueue.get(file.name);
+            const queueItem = processingQueue.getItem(file.name);
             const videoInfo = videoItem.querySelector('.video-info');
 
             // Add processing text
