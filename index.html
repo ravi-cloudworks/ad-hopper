@@ -747,20 +747,6 @@
         document.addEventListener('DOMContentLoaded', async () => {
             await initFFmpeg();
 
-            // Add the console.log here
-            console.log('Modal elements:', {
-                creditsModal,
-                creditsList,
-                applyCreditsBtn,
-                useDefaultCreditsBtn
-            });
-
-            // Add this test button temporarily
-            const testBtn = document.createElement('button');
-            testBtn.textContent = 'Test Modal';
-            testBtn.onclick = () => showCreditsModal([{ name: 'test.mp4' }]);
-            document.body.appendChild(testBtn);
-
         });
 
 
