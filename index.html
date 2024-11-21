@@ -1159,10 +1159,24 @@
 
 
                 // After successful processing, update the metadata
-                const fileSize = formatFileSize(file.size);
-                const xduration = video.duration;
-                const minutes = Math.floor(xduration / 60);
-                const seconds = Math.floor(xduration % 60);
+                const processedData = await ffmpeg.readFile(tsName);
+                const processedSize = processedData.length;
+
+                // Update the processedVideos map with the actual processed size
+                processedVideos.set(file.name, {
+                    tsFile: tsName,
+                    duration: duration,
+                    thumbnail: videoUrl,
+                    dimensions: { width, height },
+                    hasAudio: true,
+                    size: processedSize  // Use the actual processed file size
+                });
+
+                // Update metadata display with actual processed size
+                const fileSize = formatFileSize(processedSize);
+                const minutes = Math.floor(duration / 60);
+                const seconds = Math.floor(duration % 60);
+
 
                 // Remove processing text
                 processingText.remove();
@@ -1190,9 +1204,10 @@
         }
 
         // Add function to calculate and update total size
+        // Update the updateTotalSize function to be more precise
         function updateTotalSize() {
             const totalBytes = Array.from(processedVideos.values())
-                .reduce((sum, video) => sum + video.size, 0);
+                .reduce((sum, video) => sum + (video.size || 0), 0);
 
             const totalMB = totalBytes / (1024 * 1024);
             const mergeStats = document.getElementById('mergeStats');
@@ -1211,6 +1226,16 @@
             }
         }
 
+        // Add an estimation function for the final merged size
+        function estimateMergedSize() {
+            // The merged size might be slightly larger than sum of individual files
+            // due to container overhead and potential padding
+            const totalBytes = Array.from(processedVideos.values())
+                .reduce((sum, video) => sum + (video.size || 0), 0);
+
+            // Add 5% overhead for merging
+            return totalBytes * 1.05;
+        }
 
         function calculateEstimatedTime(fileSize, needsVideoConversion) {
             // Base processing time in milliseconds
@@ -1362,7 +1387,16 @@
 
 
         mergeBtn.addEventListener('click', async () => {
+
             if (processedVideos.size < 2) return;
+
+            const estimatedSize = estimateMergedSize();
+            const estimatedMB = estimatedSize / (1024 * 1024);
+
+            if (estimatedMB > 100) {
+                showToast('Estimated merged file size would exceed 100 MB limit', 'error');
+                return;
+            }
 
             try {
                 mergeBtn.disabled = true;
