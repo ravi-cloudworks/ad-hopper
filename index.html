@@ -488,7 +488,6 @@
             }
         }
     </style>
-    <script src="protection.js"></script>
     <script src="./assets/ffmpeg/package/dist/umd/ffmpeg.js"></script>
     <script src="./assets/util/package/dist/umd/index.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
@@ -590,8 +589,8 @@
                     console.log(message);
                 });
     
-                const basePath = window.location.pathname.includes('ad-hopper')
-                    ? '/ad-hopper'
+                const basePath = window.location.pathname.includes('ad-merger')
+                    ? '/ad-merger'
                     : '';
     
                 console.log('Loading FFmpeg...');
