@@ -539,18 +539,6 @@
         .merge-stats .size-ok {
             color: #27ae60;
         }
-
-        .video-item.waiting {
-            opacity: 0.7;
-        }
-
-        .video-item.waiting .video-thumbnail {
-            background: #f0f0f0;
-        }
-
-        .video-item.waiting .processing-text {
-            color: #666;
-        }
     </style>
     <script src="./assets/ffmpeg/package/dist/umd/ffmpeg.js"></script>
     <script src="./assets/util/package/dist/umd/index.js"></script>
@@ -620,7 +608,7 @@
         // Store processed videos
         const processedVideos = new Map(); // key: file name, value: { tsFile, duration, thumbnail }
 
-        // const processingQueue = new Map();
+        const processingQueue = new Map();
 
         const dragZone = document.getElementById('dragZone');
         const fileInput = document.getElementById('fileInput');
@@ -860,101 +848,13 @@
             fileInput.value = ''; // Reset input to allow selecting the same file again
         });
 
-
-
-        const processingQueue = {
-            items: [],
-            isProcessing: false,
-
-            async add(file) {
-                const waitingItem = createVideoItem(file);
-                waitingItem.classList.add('waiting');
-                const statusDiv = document.createElement('div');
-                statusDiv.className = 'processing-text';
-                statusDiv.textContent = 'Waiting...';
-                waitingItem.querySelector('.video-info').appendChild(statusDiv);
-                videoList.appendChild(waitingItem);
-
-                this.items.push({
-                    file,
-                    element: waitingItem,
-                    abort: false
-                });
-
-                console.log(`Added file: ${file.name}, Queue length: ${this.items.length}`);
-
-                if (!this.isProcessing) {
-                    await this.processNext();
-                }
-            },
-
-            getItem(filename) {
-                return this.items.find(item => item.file.name === filename);
-            },
-
-            removeItem(filename) {
-                const index = this.items.findIndex(item => item.file.name === filename);
-                if (index !== -1) {
-                    const item = this.items[index];
-                    item.abort = true;
-                    if (item.element) {
-                        item.element.remove();
-                    }
-                    // Only remove from queue if it's not currently processing (index > 0)
-                    if (index > 0) {
-                        this.items.splice(index, 1);
-                    }
-                }
-            },
-
-            async processNext() {
-                if (this.items.length === 0) {
-                    this.isProcessing = false;
-                    return;
-                }
-
-                this.isProcessing = true;
-                const currentItem = this.items[0];
-
-                try {
-                    currentItem.element.classList.remove('waiting');
-                    currentItem.element.classList.add('processing');
-                    await processVideo(currentItem.file, currentItem.element);
-
-                    // Remove processed item only after successful processing
-                    this.items.shift();
-
-                    // Process next item
-                    await this.processNext();
-                } catch (error) {
-                    console.error('Processing error:', error);
-                    if (currentItem.abort) {
-                        console.log('Processing aborted for:', currentItem.file.name);
-                    }
-                    this.items.shift();
-                    await this.processNext();
-                }
-            },
-
-            clear() {
-                this.items.forEach(item => {
-                    item.abort = true;
-                    if (item.element) {
-                        item.element.remove();
-                    }
-                });
-                this.items = [];
-                this.isProcessing = false;
-            }
-        };
-
-
         async function handleFiles(files) {
             if (!isFFmpegLoaded || !ffmpeg) {
                 showToast('Video processor is not ready yet. Please wait.', 'warning');
                 return;
             }
 
+            // Pre-validation checks before adding to UI
             for (const file of Array.from(files)) {
                 try {
                     // Check format first
@@ -995,8 +895,27 @@
                         continue;
                     }
 
-                    // If all validations pass, add to queue
-                    await processingQueue.add(file);
+                    // Check total duration
+                    // const totalDurationCheck = VideoValidator.checkTotalDuration(
+                    //     Array.from(processedVideos.values()),
+                    //     video.duration
+                    // );
+                    // if (!totalDurationCheck.valid) {
+                    //     showToast(totalDurationCheck.reason, 'error');
+                    //     continue;
+                    // }
+
+                    // If all checks pass, create video item and start processing
+                    const videoItem = createVideoItem(file);
+                    videoList.appendChild(videoItem);
+                    videoItem.classList.add('processing');
+
+                    try {
+                        await processVideo(file, videoItem);
+                        showToast(`Successfully processed ${file.name}`, 'success');
+                    } catch (processingError) {
+                        await handleProcessingError(processingError, file, videoItem);
+                    }
 
                 } catch (error) {
                     showToast(`Error with ${file.name}: ${error.message}`, 'error');
@@ -1079,7 +998,7 @@
             // Setup delete button
             item.querySelector('.delete-btn').addEventListener('click', () => {
                 const filename = item.querySelector('.video-title').textContent;
-                const queueItem = processingQueue.getItem(filename);
+                const queueItem = processingQueue.get(filename);
                 if (queueItem) {
                     queueItem.abort = true;
                 }
@@ -1096,7 +1015,7 @@
         async function processVideo(file, videoItem) {
             const progressBar = videoItem.querySelector('.progress-bar-fill');
             const video = videoItem.querySelector('video');
-            const queueItem = processingQueue.getItem(file.name);
+            const queueItem = processingQueue.get(file.name);
             const videoInfo = videoItem.querySelector('.video-info');
 
             // Add processing text
