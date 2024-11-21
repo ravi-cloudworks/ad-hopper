@@ -887,14 +887,14 @@
                     }
 
                     // Check total duration
-                    const totalDurationCheck = VideoValidator.checkTotalDuration(
-                        Array.from(processedVideos.values()),
-                        video.duration
-                    );
-                    if (!totalDurationCheck.valid) {
-                        showToast(totalDurationCheck.reason, 'error');
-                        continue;
-                    }
+                    // const totalDurationCheck = VideoValidator.checkTotalDuration(
+                    //     Array.from(processedVideos.values()),
+                    //     video.duration
+                    // );
+                    // if (!totalDurationCheck.valid) {
+                    //     showToast(totalDurationCheck.reason, 'error');
+                    //     continue;
+                    // }
 
                     // If all checks pass, create video item and start processing
                     const videoItem = createVideoItem(file);
