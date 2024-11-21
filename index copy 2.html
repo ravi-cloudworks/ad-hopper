@@ -553,6 +553,18 @@
     <div class="container">
         <div class="drag-zone" id="dragZone">
             <p>Drag and drop video files here<br>or click to select files</p>
+            <div class="format-info">Supported format: MP4 (H.264) only</div>
+            <div class="format-info">Maximum 10 files total</div>
+            <div class="format-info">Upload up to 5 files at once</div>
+            <hr>
+            Each Files
+            <div class="format-info">Duration: Max 2 minutes per video</div>
+            <div class="format-info">Maximum file size: 15 MB per video</div>
+            <hr>
+            Output File
+            <div class="format-info">Maximum total duration: 5 minutes</div>
+            <div class="format-info">Maximum file size: 100 MB MAX(10 FILES X 10MB)</div>
+
             <input type="file" id="fileInput" multiple accept="video/mp4" style="display: none">
         </div>
 
@@ -580,29 +592,8 @@
         let ffmpeg = null;
 
 
-
         const ALLOWED_FORMATS = {
             'video/mp4': '.mp4'
-        };
-
-        const VIDEO_LIMITS = {
-            input: {
-                maxDuration: 120,    // 2 minutes in seconds
-                minDuration: 5,      // 5 seconds
-                maxSize: 15,         // 15 MB
-                maxFiles: 10,
-                maxSimultaneousUploads: 5
-            },
-            output: {
-                maxDuration: 300,    // 5 minutes in seconds
-                maxSize: 100,        // 100 MB
-                minFiles: 2
-            },
-            format: {
-                supported: {
-                    'video/mp4': '.mp4'
-                }
-            }
         };
 
         // Store processed videos
@@ -1218,31 +1209,35 @@
         function updateTotalStats() {
             const videos = Array.from(processedVideos.values());
 
+            // Calculate total size
             const totalBytes = videos.reduce((sum, video) => sum + (video.size || 0), 0);
             const totalMB = totalBytes / (1024 * 1024);
 
+            // Calculate total duration
             const totalSeconds = videos.reduce((sum, video) => sum + (video.duration || 0), 0);
             const totalMinutes = Math.floor(totalSeconds / 60);
             const remainingSeconds = Math.floor(totalSeconds % 60);
 
+            // Update stats display
             const mergeStats = document.getElementById('mergeStats');
             mergeStats.innerHTML = `
-        <div>Total Size: <span class="total-size ${totalMB > VIDEO_LIMITS.output.maxSize ? 'size-warning' : 'size-ok'}">${totalMB.toFixed(2)} MB</span> / ${VIDEO_LIMITS.output.maxSize} MB</div>
+        <div>Total Size: <span class="total-size ${totalMB > 100 ? 'size-warning' : 'size-ok'}">${totalMB.toFixed(2)} MB</span> / 100 MB</div>
         <div>Total Length: ${totalMinutes}:${remainingSeconds.toString().padStart(2, '0')}</div>
     `;
 
+            // Update merge button state with both limits
             const mergeBtn = document.getElementById('mergeBtn');
             let tooltipText = '';
 
-            if (totalMB > VIDEO_LIMITS.output.maxSize) {
+            if (totalMB > 10) {
                 mergeBtn.disabled = true;
-                tooltipText = `Total size exceeds ${VIDEO_LIMITS.output.maxSize} MB limit`;
-            } else if (totalSeconds > VIDEO_LIMITS.output.maxDuration) {
+                tooltipText = 'Total size exceeds 100 MB limit';
+            } else if (totalSeconds > 300) { // 5 minutes = 300 seconds
                 mergeBtn.disabled = true;
-                tooltipText = `Total duration exceeds ${VIDEO_LIMITS.output.maxDuration / 60} minutes limit`;
-            } else if (processedVideos.size < VIDEO_LIMITS.output.minFiles) {
+                tooltipText = 'Total duration exceeds 5 minutes limit';
+            } else if (processedVideos.size < 2) {
                 mergeBtn.disabled = true;
-                tooltipText = `Add at least ${VIDEO_LIMITS.output.minFiles} videos to merge`;
+                tooltipText = 'Add at least 2 videos to merge';
             } else {
                 mergeBtn.disabled = false;
                 tooltipText = 'Click to merge videos';
@@ -1410,38 +1405,16 @@
             return filename.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '_');
         }
 
-        document.addEventListener('DOMContentLoaded', () => {
-    const dragZone = document.getElementById('dragZone');
-    if (dragZone) {
-        dragZone.innerHTML = `
-            <p>Drag and drop video files here<br>or click to select files</p>
-            <div class="format-info">Supported format: MP4 (H.264) only</div>
-            <div class="format-info">Maximum ${VIDEO_LIMITS.input.maxFiles} files total</div>
-            <div class="format-info">Upload up to ${VIDEO_LIMITS.input.maxSimultaneousUploads} files at once</div>
-            <hr>
-            Each Files
-            <div class="format-info">Duration: Max ${VIDEO_LIMITS.input.maxDuration/60} minutes per video</div>
-            <div class="format-info">Maximum file size: ${VIDEO_LIMITS.input.maxSize} MB per video</div>
-            <hr>
-            Output File
-            <div class="format-info">Maximum total duration: ${VIDEO_LIMITS.output.maxDuration/60} minutes</div>
-            <div class="format-info">Maximum file size: ${VIDEO_LIMITS.output.maxSize} MB</div>
-            <input type="file" id="fileInput" multiple accept="video/mp4" style="display: none">
-        `;
-    }
-});
-
-
 
         mergeBtn.addEventListener('click', async () => {
 
-            if (processedVideos.size < VIDEO_LIMITS.output.minFiles) return;
+            if (processedVideos.size < 2) return;
 
             const estimatedSize = estimateMergedSize();
             const estimatedMB = estimatedSize / (1024 * 1024);
 
-            if (estimatedMB > VIDEO_LIMITS.output.maxSize) {
-                showToast(`Estimated merged file size would exceed ${VIDEO_LIMITS.output.maxSize} MB limit`, 'error');
+            if (estimatedMB > 100) {
+                showToast('Estimated merged file size would exceed 100 MB limit', 'error');
                 return;
             }
 
@@ -1572,13 +1545,25 @@
         const VideoValidator = {
             // Configuration with your specific requirements
             config: {
-                totalMaxDuration: VIDEO_LIMITS.output.maxDuration,
-                minDuration: VIDEO_LIMITS.input.minDuration,
-                maxDuration: VIDEO_LIMITS.input.maxDuration,
-                maxFileSize: VIDEO_LIMITS.input.maxSize * 1024 * 1024,
-                allowedFormats: VIDEO_LIMITS.format.supported,
-                maxFiles: VIDEO_LIMITS.input.maxFiles,
-                maxSimultaneousUploads: VIDEO_LIMITS.input.maxSimultaneousUploads
+                // Total output limit
+                totalMaxDuration: 300, // 5 minutes in seconds
+
+                // Per-file duration limits
+                minDuration: 5,  //   10 seconds minimum
+                maxDuration: 120,  // 120 seconds/2 minutes maximum per file
+
+                // File size limits
+                // maxFileSize: 20 * 1024 * 1024, // 20MB in bytes
+                maxFileSize: 15 * 1024 * 1024, // 10MB in bytes
+
+                // Format restrictions
+                allowedFormats: {
+                    'video/mp4': '.mp4'
+                },
+
+                // File count/duplicate handling
+                maxFiles: 10,
+                maxSimultaneousUploads: 5  // Maximum files to process at once.
             },
 
             // Validate individual file format
