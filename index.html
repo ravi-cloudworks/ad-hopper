@@ -713,7 +713,7 @@
                 useDefaultCreditsBtn.onclick = () => {
                     const credits = {};
                     files.forEach(file => {
-                        credits[file.name] = 'Credits Not Available';
+                        credits[file.name] = 'Not Available';
                     });
                     creditsModal.style.display = 'none';
                     console.log('Using default credits for all');
