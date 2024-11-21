@@ -1228,7 +1228,7 @@
                             // Video size is correct and has audio
                             await ffmpeg.exec([
                                 '-i', inputName,
-                                '-vf', `drawtext=fontfile=font.ttf:text='${file.creditText}':fontcolor=white:fontsize=24:box=1:boxcolor=black@0.5:x=(w-text_w)/2:y=h-th-10`,
+                                '-vf', `drawtext=fontfile=font.ttf:text='Credits: ${file.creditText}':fontcolor=white:fontsize=24:box=1:boxcolor=black@0.5:x=(w-text_w)/2:y=h-th-10`,
                                 '-c:v', 'libx264',
                                 '-preset', 'ultrafast',
                                 '-c:a', 'aac',
@@ -1245,7 +1245,7 @@
                                 '-i', inputName,
                                 '-f', 'lavfi',
                                 '-i', 'anullsrc=r=44100:cl=stereo',
-                                '-vf', `drawtext=fontfile=font.ttf:text='${file.creditText}':fontcolor=white:fontsize=24:box=1:boxcolor=black@0.5:x=(w-text_w)/2:y=h-th-10`,
+                                '-vf', `drawtext=fontfile=font.ttf:text='Credits: ${file.creditText}':fontcolor=white:fontsize=24:box=1:boxcolor=black@0.5:x=(w-text_w)/2:y=h-th-10`,
                                 '-c:v', 'libx264',
                                 '-preset', 'ultrafast',
                                 '-c:a', 'aac',
@@ -1263,7 +1263,7 @@
                             // Need to resize video and has audio
                             await ffmpeg.exec([
                                 '-i', inputName,
-                                '-filter_complex', `[0:v]scale=1280:720:force_original_aspect_ratio=1,pad=1280:720:(ow-iw)/2:(oh-ih)/2:black,drawtext=fontfile=font.ttf:text='${file.creditText}':fontcolor=white:fontsize=24:box=1:boxcolor=black@0.5:x=(w-text_w)/2:y=h-th-10[v]`,
+                                '-filter_complex', `[0:v]scale=1280:720:force_original_aspect_ratio=1,pad=1280:720:(ow-iw)/2:(oh-ih)/2:black,drawtext=fontfile=font.ttf:text='Credits: ${file.creditText}':fontcolor=white:fontsize=24:box=1:boxcolor=black@0.5:x=(w-text_w)/2:y=h-th-10[v]`,
                                 '-map', '[v]',
                                 '-map', '0:a',
                                 '-c:v', 'libx264',
@@ -1283,7 +1283,7 @@
                                 '-i', inputName,
                                 '-f', 'lavfi',
                                 '-i', 'anullsrc=r=44100:cl=stereo',
-                                '-filter_complex', `[0:v]scale=1280:720:force_original_aspect_ratio=1,pad=1280:720:(ow-iw)/2:(oh-ih)/2:black,drawtext=fontfile=font.ttf:text='${file.creditText}':fontcolor=white:fontsize=24:box=1:boxcolor=black@0.5:x=(w-text_w)/2:y=h-th-10[v]`,
+                                '-filter_complex', `[0:v]scale=1280:720:force_original_aspect_ratio=1,pad=1280:720:(ow-iw)/2:(oh-ih)/2:black,drawtext=fontfile=font.ttf:text='Credits: ${file.creditText}':fontcolor=white:fontsize=24:box=1:boxcolor=black@0.5:x=(w-text_w)/2:y=h-th-10[v]`,
                                 '-map', '[v]',
                                 '-map', '1:a',
                                 '-c:v', 'libx264',
