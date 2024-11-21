@@ -863,98 +863,90 @@
 
 
         const processingQueue = {
-    items: [],
-    isProcessing: false,
-    
-    logQueueState(action) {
-        console.log(`Queue Action: ${action}`);
-        console.log('Queue Items:', this.items.map(item => ({
-            filename: item.file.name,
-            abort: item.abort,
-            status: item.element ? 'Has UI' : 'No UI'
-        })));
-        console.log('Is Processing:', this.isProcessing);
-        console.log('------------------------');
-    },
+            items: [],
+            isProcessing: false,
 
-    async add(file) {
-        this.logQueueState('Before Add');
-        
-        const waitingItem = createVideoItem(file);
-        waitingItem.classList.add('waiting');
-        const statusDiv = document.createElement('div');
-        statusDiv.className = 'processing-text';
-        statusDiv.textContent = this.isProcessing ? 'Waiting...' : 'Processing...';
-        waitingItem.querySelector('.video-info').appendChild(statusDiv);
-        videoList.appendChild(waitingItem);
+            async add(file) {
+                const waitingItem = createVideoItem(file);
+                waitingItem.classList.add('waiting');
+                const statusDiv = document.createElement('div');
+                statusDiv.className = 'processing-text';
+                statusDiv.textContent = 'Waiting...';
+                waitingItem.querySelector('.video-info').appendChild(statusDiv);
+                videoList.appendChild(waitingItem);
 
-        this.items.push({
-            file,
-            abort: false,
-            element: waitingItem
-        });
+                this.items.push({
+                    file,
+                    element: waitingItem,
+                    abort: false
+                });
 
-        this.logQueueState('After Add');
+                console.log(`Added file: ${file.name}, Queue length: ${this.items.length}`);
 
-        if (!this.isProcessing) {
-            await this.processNext();
-        }
-    },
+                if (!this.isProcessing) {
+                    await this.processNext();
+                }
+            },
 
-    getItem(filename) {
-        this.logQueueState(`Get Item: ${filename}`);
-        return this.items.find(item => item.file.name === filename);
-    },
+            getItem(filename) {
+                return this.items.find(item => item.file.name === filename);
+            },
 
-    removeItem(filename) {
-        this.logQueueState(`Before Remove: ${filename}`);
-        const item = this.getItem(filename);
-        if (item && item.element) {
-            item.element.remove();
-        }
-        this.items = this.items.filter(item => item.file.name !== filename);
-        this.logQueueState(`After Remove: ${filename}`);
-    },
+            removeItem(filename) {
+                const index = this.items.findIndex(item => item.file.name === filename);
+                if (index !== -1) {
+                    const item = this.items[index];
+                    item.abort = true;
+                    if (item.element) {
+                        item.element.remove();
+                    }
+                    // Only remove from queue if it's not currently processing (index > 0)
+                    if (index > 0) {
+                        this.items.splice(index, 1);
+                    }
+                }
+            },
 
-    async processNext() {
-        this.logQueueState('Before Process Next');
-        
-        if (this.items.length === 0) {
-            this.isProcessing = false;
-            this.logQueueState('Queue Empty');
-            return;
-        }
-        
-        this.isProcessing = true;
-        const nextItem = this.items[0];
-        
-        try {
-            nextItem.element.classList.remove('waiting');
-            nextItem.element.classList.add('processing');
-            await processVideo(nextItem.file, nextItem.element);
-            this.items.shift();
-            this.logQueueState('After Process Success');
-            await this.processNext();
-        } catch (error) {
-            console.error('Processing error:', error);
-            this.items.shift();
-            this.logQueueState('After Process Error');
-            await this.processNext();
-        }
-    },
+            async processNext() {
+                if (this.items.length === 0) {
+                    this.isProcessing = false;
+                    return;
+                }
 
-    clear() {
-        this.logQueueState('Before Clear');
-        this.items.forEach(item => {
-            if (item.element) {
-                item.element.remove();
+                this.isProcessing = true;
+                const currentItem = this.items[0];
+
+                try {
+                    currentItem.element.classList.remove('waiting');
+                    currentItem.element.classList.add('processing');
+                    await processVideo(currentItem.file, currentItem.element);
+
+                    // Remove processed item only after successful processing
+                    this.items.shift();
+
+                    // Process next item
+                    await this.processNext();
+                } catch (error) {
+                    console.error('Processing error:', error);
+                    if (currentItem.abort) {
+                        console.log('Processing aborted for:', currentItem.file.name);
+                    }
+                    this.items.shift();
+                    await this.processNext();
+                }
+            },
+
+            clear() {
+                this.items.forEach(item => {
+                    item.abort = true;
+                    if (item.element) {
+                        item.element.remove();
+                    }
+                });
+                this.items = [];
+                this.isProcessing = false;
             }
-        });
-        this.items = [];
-        this.isProcessing = false;
-        this.logQueueState('After Clear');
-    }
-};
+        };
 
 
         async function handleFiles(files) {
