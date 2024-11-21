@@ -559,7 +559,7 @@
             <hr>
             Each Files
             <div class="format-info">Duration: Max 2 minutes per video</div>
-            <div class="format-info">Maximum file size: 10MB per video</div>
+            <div class="format-info">Maximum file size: 15 MB per video</div>
             <hr>
             Output File
             <div class="format-info">Maximum total duration: 5 minutes</div>
@@ -988,14 +988,15 @@
 
             // Setup delete button
             item.querySelector('.delete-btn').addEventListener('click', () => {
-                const queueItem = processingQueue.get(file.name);
+                const filename = item.querySelector('.video-title').textContent;
+                const queueItem = processingQueue.get(filename);
                 if (queueItem) {
                     queueItem.abort = true;
                 }
-                processedVideos.delete(file.name);
+                processedVideos.delete(filename);
                 item.remove();
-                updatePositionNumbers(); // Update numbers after removing item
-                updateMergeButton();
+                updatePositionNumbers();
+                updateTotalStats(); // Update stats after deletion
             });
 
             // Setup retry button... (rest remains the same)
@@ -1191,7 +1192,7 @@
                 videoInfo.appendChild(metadataDiv);
 
                 // Update total size display
-                updateTotalSize();
+                updateTotalStats();
 
 
 
@@ -1205,24 +1206,32 @@
 
         // Add function to calculate and update total size
         // Update the updateTotalSize function to be more precise
-        function updateTotalSize() {
-            const totalBytes = Array.from(processedVideos.values())
-                .reduce((sum, video) => sum + (video.size || 0), 0);
+        function updateTotalStats() {
+            const videos = Array.from(processedVideos.values());
 
+            // Calculate total size
+            const totalBytes = videos.reduce((sum, video) => sum + (video.estimatedMp4Size || 0), 0);
             const totalMB = totalBytes / (1024 * 1024);
+
+            // Calculate total duration
+            const totalSeconds = videos.reduce((sum, video) => sum + (video.duration || 0), 0);
+            const totalMinutes = Math.floor(totalSeconds / 60);
+            const remainingSeconds = Math.floor(totalSeconds % 60);
+
+            // Update stats display
             const mergeStats = document.getElementById('mergeStats');
-            const totalSizeSpan = mergeStats.querySelector('.total-size');
+            mergeStats.innerHTML = `
+        <div>Total Size: <span class="total-size ${totalMB > 100 ? 'size-warning' : 'size-ok'}">${totalMB.toFixed(2)} MB</span> / 100 MB</div>
+        <div>Total Length: ${totalMinutes}:${remainingSeconds.toString().padStart(2, '0')}</div>
+    `;
 
-            totalSizeSpan.textContent = totalMB.toFixed(2) + ' MB';
-            totalSizeSpan.className = 'total-size ' + (totalMB > 100 ? 'size-warning' : 'size-ok');
-
-            // Update merge button state based on total size
+            // Update merge button state
             const mergeBtn = document.getElementById('mergeBtn');
             if (totalMB > 100) {
                 mergeBtn.disabled = true;
                 mergeBtn.setAttribute('data-tooltip', 'Total size exceeds 100 MB limit');
             } else {
-                updateMergeButton(); // Call existing function to check other conditions
+                updateMergeButton();
             }
         }
 
