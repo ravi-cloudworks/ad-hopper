@@ -1217,18 +1217,18 @@
         // Update the updateTotalSize function to be more precise
         function updateTotalStats() {
             const videos = Array.from(processedVideos.values());
-
-            const totalBytes = videos.reduce((sum, video) => sum + (video.size || 0), 0);
-            const totalMB = totalBytes / (1024 * 1024);
-
-            const totalSeconds = videos.reduce((sum, video) => sum + (video.duration || 0), 0);
-            const totalMinutes = Math.floor(totalSeconds / 60);
-            const remainingSeconds = Math.floor(totalSeconds % 60);
-
-            const mergeStats = document.getElementById('mergeStats');
-            mergeStats.innerHTML = `
+    
+    const totalBytes = videos.reduce((sum, video) => sum + (video.size || 0), 0);
+    const totalMB = totalBytes / (1024 * 1024);
+    
+    const totalSeconds = videos.reduce((sum, video) => sum + (video.duration || 0), 0);
+    const totalMinutes = Math.floor(totalSeconds / 60);
+    const remainingSeconds = Math.floor(totalSeconds % 60);
+    
+    const mergeStats = document.getElementById('mergeStats');
+    mergeStats.innerHTML = `
         <div>Total Size: <span class="total-size ${totalMB > VIDEO_LIMITS.output.maxSize ? 'size-warning' : 'size-ok'}">${totalMB.toFixed(2)} MB</span> / ${VIDEO_LIMITS.output.maxSize} MB</div>
-        <div>Total Length: ${totalMinutes}:${remainingSeconds.toString().padStart(2, '0')}</div>
+        <div>Total Length: ${totalMinutes || 0}:${(remainingSeconds || 0).toString().padStart(2, '0')}</div>
     `;
 
             const mergeBtn = document.getElementById('mergeBtn');
@@ -1411,25 +1411,25 @@
         }
 
         document.addEventListener('DOMContentLoaded', () => {
-    const dragZone = document.getElementById('dragZone');
-    if (dragZone) {
-        dragZone.innerHTML = `
+            const dragZone = document.getElementById('dragZone');
+            if (dragZone) {
+                dragZone.innerHTML = `
             <p>Drag and drop video files here<br>or click to select files</p>
             <div class="format-info">Supported format: MP4 (H.264) only</div>
             <div class="format-info">Maximum ${VIDEO_LIMITS.input.maxFiles} files total</div>
             <div class="format-info">Upload up to ${VIDEO_LIMITS.input.maxSimultaneousUploads} files at once</div>
             <hr>
             Each Files
-            <div class="format-info">Duration: Max ${VIDEO_LIMITS.input.maxDuration/60} minutes per video</div>
+            <div class="format-info">Duration: Max ${VIDEO_LIMITS.input.maxDuration / 60} minutes per video</div>
             <div class="format-info">Maximum file size: ${VIDEO_LIMITS.input.maxSize} MB per video</div>
             <hr>
             Output File
-            <div class="format-info">Maximum total duration: ${VIDEO_LIMITS.output.maxDuration/60} minutes</div>
+            <div class="format-info">Maximum total duration: ${VIDEO_LIMITS.output.maxDuration / 60} minutes</div>
             <div class="format-info">Maximum file size: ${VIDEO_LIMITS.output.maxSize} MB</div>
             <input type="file" id="fileInput" multiple accept="video/mp4" style="display: none">
         `;
-    }
-});
+            }
+        });
 
 
 
@@ -1533,23 +1533,16 @@
         // Add the JavaScript handler
         document.getElementById('clearBtn').addEventListener('click', async () => {
             try {
-                // Clear all videos from UI
                 videoList.innerHTML = '';
-
-                // Clean up all temporary files
                 for (const [filename, fileInfo] of processedVideos) {
                     if (fileInfo.tsFile) {
                         await ffmpeg.deleteFile(fileInfo.tsFile);
                     }
                 }
-
-                // Clear all data structures
                 processedVideos.clear();
                 processingQueue.clear();
-
-                // Reset merge button
+                updateTotalStats(); // Add this line
                 updateMergeButton();
-
                 showToast('All videos cleared', 'success');
             } catch (error) {
                 console.error('Error clearing videos:', error);
