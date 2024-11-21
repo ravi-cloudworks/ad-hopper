@@ -649,31 +649,25 @@
 
 
         function showCreditsModal(files) {
-            // Return a Promise that resolves with credits for each file
             return new Promise((resolve) => {
                 // Clear previous entries
                 creditsList.innerHTML = '';
 
-                // Add entries for each file
-                files.forEach(file => {
-                    // Create preview and input for each file
-                });
-
                 // Show modal
                 creditsModal.style.display = 'flex';
+                console.log('Modal opened with files:', files.length);
 
-                // Handle button clicks
+                // Test buttons
                 applyCreditsBtn.onclick = () => {
-                    // Collect all credits and resolve
-                    const credits = {};
-                    // Collect and return credits
-                    resolve(credits);
+                    console.log('Apply clicked');
                     creditsModal.style.display = 'none';
+                    resolve('test credits');
                 };
 
                 useDefaultCreditsBtn.onclick = () => {
-                    resolve('Credits Not Available');
+                    console.log('Default clicked');
                     creditsModal.style.display = 'none';
+                    resolve('Credits Not Available');
                 };
             });
         }
@@ -710,6 +704,12 @@
                 applyCreditsBtn,
                 useDefaultCreditsBtn
             });
+
+            // Add this test button temporarily
+            const testBtn = document.createElement('button');
+            testBtn.textContent = 'Test Modal';
+            testBtn.onclick = () => showCreditsModal([{ name: 'test.mp4' }]);
+            document.body.appendChild(testBtn);
 
         });
 
