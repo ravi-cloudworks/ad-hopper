@@ -1621,10 +1621,13 @@
                 // Execute merge command
                 const mergeCommand = [
                     '-i', `concat:${fileList}`,
-                    '-c', 'copy',
+                    '-c:v', 'copy',
+                    '-c:a', 'copy',
                     '-bsf:a', 'aac_adtstoasc',
                     '-fflags', '+genpts',
                     '-async', '1',
+                    '-max_interleave_delta', '0',
+                    '-max_muxing_queue_size', '1024',
                     '-y',
                     'output.mp4'
                 ];
