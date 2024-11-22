@@ -1612,26 +1612,22 @@
 
                 // Join files with pipe for FFmpeg
                 const fileList = orderedFiles.join('|');
-                // console.log('Merge command:', [
-                //     '-i', `concat:${fileList}`,
-                //     '-c', 'copy',
-                //     '-bsf:a', 'aac_adtstoasc',
-                //     '-y',
-                //     'output.mp4'
-                // ].join(' '));
-
-                // Execute merge command
-                const mergeCommand = [
+                console.log('Merge command:', [
                     '-i', `concat:${fileList}`,
                     '-c', 'copy',
                     '-bsf:a', 'aac_adtstoasc',
-                    '-fflags', '+genpts',
-                    '-async', '1',
                     '-y',
                     'output.mp4'
-                ];
-                console.log('Merge command:', mergeCommand.join(' '));
-                await ffmpeg.exec(mergeCommand);
+                ].join(' '));
+
+                // Execute merge command
+                await ffmpeg.exec([
+                    '-i', `concat:${fileList}`,
+                    '-c', 'copy',
+                    '-bsf:a', 'aac_adtstoasc',
+                    '-y',
+                    'output.mp4'
+                ]);
 
                 // Check output file
                 const data = await ffmpeg.readFile('output.mp4');
