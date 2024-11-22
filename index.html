@@ -1211,15 +1211,24 @@
                 try {
                     if (!needsVideoConversion) {
                         if (hasAudio) {
+                            // First stage - Process with audio
                             await ffmpeg.exec([
                                 '-i', inputName,
+                                '-c:v', 'copy',
+                                '-c:a', 'aac',
+                                '-ac', '2',
+                                '-ar', '44100',
+                                '-b:a', '128k',
+                                '-f', 'mp4',
+                                'temp_no_text.mp4'
+                            ]);
+
+                            // Second stage - Add text
+                            await ffmpeg.exec([
+                                '-i', 'temp_no_text.mp4',
                                 '-vf', `drawtext=fontfile=font.ttf:text='Credits\\:${file.creditText}':fontcolor=white:fontsize=20:box=1:boxcolor=black@0.7:boxborderw=5:bordercolor=black@0.8:borderw=2:x=(w-text_w)/2:y=h-th-30`,
                                 '-c:v', 'libx264',
-                                '-preset', 'ultrafast',
                                 '-c:a', 'copy',
-                                '-vsync', '1',
-                                '-r', '25',
-                                '-async', '1',
                                 '-bsf:v', 'h264_mp4toannexb',
                                 '-f', 'mpegts',
                                 tsName
@@ -1231,11 +1240,7 @@
                                 '-i', 'anullsrc=r=44100:cl=stereo',
                                 '-vf', `drawtext=fontfile=font.ttf:text='Credits\\:${file.creditText}':fontcolor=white:fontsize=20:box=1:boxcolor=black@0.7:boxborderw=5:bordercolor=black@0.8:borderw=2:x=(w-text_w)/2:y=h-th-30`,
                                 '-c:v', 'libx264',
-                                '-preset', 'ultrafast',
                                 '-c:a', 'aac',
-                                '-vsync', '1',
-                                '-r', '25',
-                                '-async', '1',
                                 '-shortest',
                                 '-bsf:v', 'h264_mp4toannexb',
                                 '-f', 'mpegts',
@@ -1244,25 +1249,30 @@
                         }
                     } else {
                         if (hasAudio) {
-                            // Need to resize video and has audio
+                            // First stage - Process with audio and resize
                             await ffmpeg.exec([
                                 '-i', inputName,
-                                '-filter_complex', `[0:v]scale=1280:720:force_original_aspect_ratio=1,pad=1280:720:(ow-iw)/2:(oh-ih)/2:black,drawtext=fontfile=font.ttf:text='Credits\\:${file.creditText}':fontcolor=white:fontsize=20:box=1:boxcolor=black@0.7:boxborderw=5:bordercolor=black@0.8:borderw=2:x=(w-text_w)/2:y=h-th-30[v]`,
-                                '-map', '[v]',
-                                '-map', '0:a',
+                                '-vf', 'scale=1280:720:force_original_aspect_ratio=1,pad=1280:720:(ow-iw)/2:(oh-ih)/2:black',
                                 '-c:v', 'libx264',
-                                '-profile:v', 'main',
-                                '-preset', 'ultrafast',
                                 '-c:a', 'aac',
                                 '-ac', '2',
                                 '-ar', '44100',
                                 '-b:a', '128k',
+                                '-f', 'mp4',
+                                'temp_no_text.mp4'
+                            ]);
+
+                            // Second stage - Add text
+                            await ffmpeg.exec([
+                                '-i', 'temp_no_text.mp4',
+                                '-vf', `drawtext=fontfile=font.ttf:text='Credits\\:${file.creditText}':fontcolor=white:fontsize=20:box=1:boxcolor=black@0.7:boxborderw=5:bordercolor=black@0.8:borderw=2:x=(w-text_w)/2:y=h-th-30`,
+                                '-c:v', 'libx264',
+                                '-c:a', 'copy',
                                 '-bsf:v', 'h264_mp4toannexb',
                                 '-f', 'mpegts',
                                 tsName
                             ]);
                         } else {
-                            // Need to resize video and no audio - add silent audio
                             await ffmpeg.exec([
                                 '-i', inputName,
                                 '-f', 'lavfi',
@@ -1271,12 +1281,7 @@
                                 '-map', '[v]',
                                 '-map', '1:a',
                                 '-c:v', 'libx264',
-                                '-profile:v', 'main',
-                                '-preset', 'ultrafast',
                                 '-c:a', 'aac',
-                                '-ac', '2',
-                                '-ar', '44100',
-                                '-b:a', '128k',
                                 '-shortest',
                                 '-bsf:v', 'h264_mp4toannexb',
                                 '-f', 'mpegts',
