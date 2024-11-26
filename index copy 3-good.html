@@ -1694,7 +1694,7 @@
                 const totalDuration = this.formatDuration(videos.reduce((sum, v) => sum + v.duration, 0));
                 const timings = this.generateTimings(videos);
 
-                return `merged_${numClips}clips_${totalDuration}_(${timings})_${date}.mp4`;
+                return `merged_${numClips}clips_${totalDuration}__${timings}__${date}.mp4`;
             }
         };</script>
 </body>
